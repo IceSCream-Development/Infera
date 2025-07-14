@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "229022305497",
+    "project_id": "infera-cca34",
+    "storage_bucket": "infera-cca34.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:229022305497:android:490947794ef9a57ceb42c8",
+        "android_client_info": {
+          "package_name": "com.icescream.infera"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWyCmZ9ciyGCtOU58DMOLkHdP3zO__6lw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
