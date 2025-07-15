@@ -1,4 +1,4 @@
-package com.icescream.infera
+package com.icescream.infera.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button

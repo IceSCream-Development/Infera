@@ -9,30 +9,34 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
+/**
+ * Pantalla de inicio de sesión con validación, opción a recibir mensaje de error externo,
+ * botón para regresar, y comentarios en español para facilitar el aprendizaje.
+ */
 @Composable
 fun LoginScreen(
     onLogin: (String, String) -> Unit, // Llamada cuando el usuario intenta iniciar sesión
-    onBack: () -> Unit // Llamada al presionar 'Regresar'
+    onBack: () -> Unit, // Llamada al presionar 'Regresar'
+    errorMsg: String? = null // Mensaje de error del backend, opcional
 ) {
-    // Estados para email y contraseña
     var email by remember { mutableStateOf("") } // Email del usuario
     var password by remember { mutableStateOf("") } // Contraseña digitada
-    var errorMessage by remember { mutableStateOf<String?>(null) } // Para mostrar mensaje de error
-    var passwordVisible by remember { mutableStateOf(false) } // Visibilidad de la contraseña (puedes expandir luego)
+    var errorMessage by remember { mutableStateOf<String?>(null) } // Para validación local
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    // Valida que el email tenga formato válido
+    // Valida el formato del email
     fun isEmailValid(email: String): Boolean =
         android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
-    // Lógica al presionar "Iniciar sesión". Realiza validaciones y muestra un mensaje de error si corresponde
+    // Lógica al intentar iniciar sesión
     fun login() {
-        errorMessage = null // Reinicia el mensaje de error
+        errorMessage = null
         if (email.isBlank() || password.isBlank()) {
             errorMessage = "¡UPS! Parece que tu usuario o contraseña son incorrectos"
         } else if (!isEmailValid(email)) {
             errorMessage = "¡UPS! Parece que tu usuario o contraseña son incorrectos"
         } else {
-            onLogin(email, password) // Llama a la lógica externa de login
+            onLogin(email, password)
         }
     }
 
@@ -42,10 +46,10 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.Center)
-                .padding(horizontal = 32.dp), // Margen horizontal para mayor orden
+                .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Iniciar sesión", style = MaterialTheme.typography.headlineMedium) // Título
+            Text("Iniciar sesión", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedTextField(
                 value = email,
@@ -62,8 +66,9 @@ fun LoginScreen(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation()
             )
             Spacer(modifier = Modifier.height(16.dp))
-            // Mensaje de error sobre el botón de iniciar sesión cuando haya error
-            errorMessage?.let {
+            // Muestra primero error local, si no, muestra el externo
+            val messageToShow = errorMessage ?: errorMsg
+            messageToShow?.let {
                 Text(
                     it,
                     color = MaterialTheme.colorScheme.error,
