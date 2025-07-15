@@ -1,5 +1,6 @@
 package com.icescream.infera.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,13 +16,13 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun LoginScreen(
-    onLogin: (String, String) -> Unit, // Llamada cuando el usuario intenta iniciar sesión
-    onBack: () -> Unit, // Llamada al presionar 'Regresar'
-    errorMsg: String? = null // Mensaje de error del backend, opcional
+    onLogin: (String, String) -> Unit,
+    onBack: () -> Unit,
+    errorMsg: String? = null
 ) {
-    var email by remember { mutableStateOf("") } // Email del usuario
-    var password by remember { mutableStateOf("") } // Contraseña digitada
-    var errorMessage by remember { mutableStateOf<String?>(null) } // Para validación local
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     var passwordVisible by remember { mutableStateOf(false) }
 
     // Valida el formato del email
@@ -41,7 +42,11 @@ fun LoginScreen(
     }
 
     // Estructura visual principal usando Box y Column (Jetpack Compose)
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -49,21 +54,27 @@ fun LoginScreen(
                 .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Iniciar sesión", style = MaterialTheme.typography.headlineMedium)
+            Text(
+                "Iniciar sesión",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
             Spacer(modifier = Modifier.height(24.dp))
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth()
+                label = { Text("Email", color = MaterialTheme.colorScheme.onBackground) },
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onBackground)
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Contraseña") },
+                label = { Text("Contraseña", color = MaterialTheme.colorScheme.onBackground) },
                 modifier = Modifier.fillMaxWidth(),
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation()
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onBackground)
             )
             Spacer(modifier = Modifier.height(16.dp))
             // Muestra primero error local, si no, muestra el externo
