@@ -10,13 +10,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
 import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(
     onRegister: (String, String, String, () -> Unit) -> Unit, // Ahora pasa un callback de éxito
     onBack: () -> Unit, // Llamada al presionar 'Regresar'
-    errorMsg: String? = null // Mensaje de error externo a mostrar (por ejemplo, desde el backend)
+    errorMsg: String? = null, // Mensaje de error externo a mostrar (por ejemplo, desde el backend)
+    onGoToLogin: () -> Unit = {} // Nuevo callback para ir a inicio de sesión
 ) {
     // Estados para los datos del formulario
     var username by remember { mutableStateOf("") } // Nombre de usuario
@@ -120,6 +122,13 @@ fun RegisterScreen(
                 Button(onClick = { register() }, modifier = Modifier.fillMaxWidth()) {
                     Text("Registrarse")
                 }
+                // Texto clickeable para ir a inicio de sesión
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "¿Ya tienes cuenta?",
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable(onClick = onGoToLogin)
+                )
             }
             // Botón "Regresar" en la parte superior izquierda
             Button(

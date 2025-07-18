@@ -5,10 +5,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import com.icescream.infera.ui.theme.InferaTheme
+import com.icescream.infera.ui.AprendeScreen
+import com.icescream.infera.ui.ChatBotScreen
+import com.icescream.infera.ui.LogrosScreen
+import com.icescream.infera.ui.LeccionesScreen
+import com.icescream.infera.ui.PerfilScreen
 import com.icescream.infera.ui.RegisterScreen
 import com.icescream.infera.ui.LoginScreen
 import com.icescream.infera.ui.WelcomeScreen
-import com.icescream.infera.ui.HomeScreen
+import com.icescream.infera.ui.WelcomeUserScreen
+import com.icescream.infera.ui.HomeScreen  // Import correcto de HomeScreen
 import com.icescream.infera.data.AuthRepository // Importa el AuthRepository singleton
 
 // MainActivity es el punto de entrada de la app (actividad principal)
@@ -17,10 +23,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             // Estado que decide cuál pantalla mostrar
-            var pantallaActual by remember { mutableStateOf("welcome") } // Posibles: "welcome", "login", "register", "home"
+            var pantallaActual by remember { mutableStateOf("welcome") } // Posibles: "welcome", "login", "register", "welcomeUser", "home"
             var registerErrorMsg by remember { mutableStateOf<String?>(null) }
             var loginErrorMsg by remember { mutableStateOf<String?>(null) }
             var homeTabIndex by remember { mutableStateOf(0) } // Indice de la sección activa de Home
+            var currentUsername by remember { mutableStateOf<String?>(null) } // Para personalizar WelcomeUserScreen
 
             // Usa el tema global
             InferaTheme {
@@ -38,25 +45,34 @@ class MainActivity : ComponentActivity() {
 
                     "login" -> {
                         LoginScreen(
-                            onLogin = { email, password ->
+                            onLogin = { email, password, callback ->
                                 AuthRepository.loginUser(
                                     email = email,
                                     password = password,
                                     onSuccess = { userProfile ->
                                         loginErrorMsg = null
-                                        pantallaActual = "home"
-                                        homeTabIndex = 0 // Siempre empieza en Principal
+                                        currentUsername = userProfile["username"] as? String
+                                        callback(null) // Login exitoso
                                     },
                                     onError = { errorMsg ->
-                                        loginErrorMsg = errorMsg // Si falla, mostrar error
+                                        loginErrorMsg = errorMsg
+                                        callback(errorMsg)
                                     }
                                 )
+                            },
+                            onLoginSuccess = {
+                                pantallaActual = "welcomeUser"
+                                homeTabIndex = 0
                             },
                             onBack = {
                                 pantallaActual = "welcome"
                                 loginErrorMsg = null
                             },
-                            errorMsg = loginErrorMsg // <-- asegúrate que LoginScreen acepte este parámetro si quieres mostrar errores
+                            errorMsg = loginErrorMsg,
+                            onGoToRegister = {
+                                pantallaActual = "register"
+                                loginErrorMsg = null
+                            }
                         )
                     }
 
@@ -69,9 +85,10 @@ class MainActivity : ComponentActivity() {
                                     password = password,
                                     onSuccess = {
                                         registerErrorMsg = null
+                                        currentUsername = username
                                         onSuccess() // Muestra el snackbar
-                                        pantallaActual = "home"
-                                        homeTabIndex = 0 // Arrancamos siempre en Principal
+                                        pantallaActual = "login"
+                                        homeTabIndex = 0
                                     },
                                     onError = { errorMsg ->
                                         registerErrorMsg = errorMsg
@@ -82,14 +99,37 @@ class MainActivity : ComponentActivity() {
                                 pantallaActual = "welcome"
                                 registerErrorMsg = null
                             },
-                            errorMsg = registerErrorMsg
+                            errorMsg = registerErrorMsg,
+                            onGoToLogin = {
+                                pantallaActual = "login"
+                                registerErrorMsg = null
+                            }
+                        )
+                    }
+
+                    "welcomeUser" -> {
+                        WelcomeUserScreen(
+                            username = currentUsername,
+                            onContinue = {
+                                pantallaActual = "home"
+                                // Otros resets de estado si hace falta
+                            }
                         )
                     }
 
                     "home" -> {
                         HomeScreen(
                             seccionSeleccionada = homeTabIndex,
-                            onSeleccionar = { homeTabIndex = it }
+                            onSeleccionar = { nuevoIndex -> homeTabIndex = nuevoIndex },
+                            contenido = {
+                                when (homeTabIndex) {
+                                    0 -> AprendeScreen()
+                                    1 -> ChatBotScreen()
+                                    2 -> LogrosScreen()
+                                    3 -> LeccionesScreen()
+                                    4 -> PerfilScreen()
+                                }
+                            }
                         )
                     }
                 }

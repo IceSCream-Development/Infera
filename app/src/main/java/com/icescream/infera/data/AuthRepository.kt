@@ -19,30 +19,43 @@ object AuthRepository {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    // UID del usuario creado
-                    val uid = auth.currentUser!!.uid
-                    // El perfil que guardaremos en Firestore
-                    val perfil = hashMapOf(
-                        "username" to username,
-                        "email" to email
-                    )
-                    db.collection("users").document(uid).set(perfil)
-                        .addOnSuccessListener { onSuccess() }
-                        .addOnFailureListener { e ->
-                            onError("Hubo un problema guardando tu perfil. Intenta nuevamente.")
-                        }
+        // PRIMERO, comprobar que no existe ya ese username
+        db.collection("users")
+            .whereEqualTo("username", username)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    // Ya existe ese username
+                    onError("Ese nombre de usuario ya está en uso. Prueba uno diferente.")
                 } else {
-                    val errorMsg = when (val ex = task.exception) {
-                        is FirebaseAuthUserCollisionException -> "Este correo ya está registrado."
-                        is FirebaseAuthWeakPasswordException -> "Usa una contraseña de al menos 6 caracteres."
-                        is FirebaseAuthInvalidCredentialsException -> "El correo no es válido."
-                        else -> "No se pudo crear tu cuenta. Intenta nuevamente."
-                    }
-                    onError(errorMsg)
+                    // Si NO existe, continúa con el registro en Auth
+                    auth.createUserWithEmailAndPassword(email, password)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                val uid = auth.currentUser!!.uid
+                                val perfil = hashMapOf(
+                                    "username" to username,
+                                    "email" to email
+                                )
+                                db.collection("users").document(uid).set(perfil)
+                                    .addOnSuccessListener { onSuccess() }
+                                    .addOnFailureListener { e ->
+                                        onError("Hubo un problema guardando tu perfil. Intenta nuevamente.")
+                                    }
+                            } else {
+                                val errorMsg = when (val ex = task.exception) {
+                                    is FirebaseAuthUserCollisionException -> "Este correo ya está registrado."
+                                    is FirebaseAuthWeakPasswordException -> "Usa una contraseña de al menos 6 caracteres."
+                                    is FirebaseAuthInvalidCredentialsException -> "El correo no es válido."
+                                    else -> "No se pudo crear tu cuenta. Intenta nuevamente."
+                                }
+                                onError(errorMsg)
+                            }
+                        }
                 }
+            }
+            .addOnFailureListener {
+                onError("No se pudo consultar el nombre de usuario. Intenta nuevamente.")
             }
     }
 

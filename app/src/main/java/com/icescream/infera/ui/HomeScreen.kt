@@ -1,65 +1,56 @@
 package com.icescream.infera.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.vectorResource
-
-/**
- * HomeScreen con barra de navegación inferior.
- * Incluye 5 secciones/tab-espacios. Las puedes personalizar fácilmente.
- */
 
 @Composable
 fun HomeScreen(
-    seccionSeleccionada: Int = 0,                  // Índice de la pestaña activa
-    onSeleccionar: (Int) -> Unit = {}              // Al seleccionar otra pestaña
+    seccionSeleccionada: Int,
+    onSeleccionar: (Int) -> Unit,
+    contenido: @Composable () -> Unit
 ) {
-    // Nombres de ejemplo para las 5 secciones
-    val items = listOf(
-        "Principal", "Retos", "Progreso", "Perfil", "Ajustes"
-    )
-
     Scaffold(
         bottomBar = {
             NavigationBar {
-                items.forEachIndexed { index, label ->
-                    NavigationBarItem(
-                        selected = seccionSeleccionada == index,
-                        onClick = { onSeleccionar(index) },
-                        label = { Text(label) },
-                        icon = {
-                            // Puedes cambiar los iconos por reales usando ImageVector o Painter
-                            Icon(
-                                painter = painterResource(android.R.drawable.ic_menu_view),
-                                contentDescription = label
-                            )
-                        },
-                        alwaysShowLabel = true
-                    )
-                }
+                NavigationBarItem(
+                    selected = seccionSeleccionada == 0,
+                    onClick = { onSeleccionar(0) },
+                    label = { Text("Aprende") },
+                    icon = { /* Aquí podrías poner un ícono si lo deseas */ }
+                )
+                NavigationBarItem(
+                    selected = seccionSeleccionada == 1,
+                    onClick = { onSeleccionar(1) },
+                    label = { Text("ChatBot") },
+                    icon = { }
+                )
+                NavigationBarItem(
+                    selected = seccionSeleccionada == 2,
+                    onClick = { onSeleccionar(2) },
+                    label = { Text("Logros") },
+                    icon = { }
+                )
+                NavigationBarItem(
+                    selected = seccionSeleccionada == 3,
+                    onClick = { onSeleccionar(3) },
+                    label = { Text("Lecciones") },
+                    icon = { }
+                )
+                NavigationBarItem(
+                    selected = seccionSeleccionada == 4,
+                    onClick = { onSeleccionar(4) },
+                    label = { Text("Perfil") },
+                    icon = { }
+                )
             }
         }
-    ) { padding ->
-        // Muestra el contenido de la sección activa
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("Pantalla: " + items[seccionSeleccionada])
+    ) { paddingValues ->
+        Box(modifier = Modifier.padding(paddingValues)) {
+            contenido()
         }
     }
 }

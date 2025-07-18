@@ -9,6 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
+import android.util.Patterns // <--- Import necesario para validación
 
 /**
  * Pantalla de inicio de sesión con validación, opción a recibir mensaje de error externo,
@@ -16,28 +19,46 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun LoginScreen(
-    onLogin: (String, String) -> Unit,
+    onLogin: (String, String, (String?) -> Unit) -> Unit, 
+    onLoginSuccess: () -> Unit,
     onBack: () -> Unit,
-    errorMsg: String? = null
+    errorMsg: String? = null,
+    onGoToRegister: () -> Unit = {} 
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var passwordVisible by remember { mutableStateOf(false) }
+    // Estados para campos y manejo de errores
+    var email by remember { mutableStateOf("") }               // Email que escribe el usuario
+    var password by remember { mutableStateOf("") }            // Contraseña
+    var errorMessage by remember { mutableStateOf<String?>(null) } // Mensajes de error
+    var isLoading by remember { mutableStateOf(false) }         // Muestra un ProgressBar si se está logeando
+    var passwordVisible by remember { mutableStateOf(false) }   // Si se muestra la contraseña
 
-    // Valida el formato del email
+    // Función para validar el formato de email
     fun isEmailValid(email: String): Boolean =
-        android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+        Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
-    // Lógica al intentar iniciar sesión
-    fun login() {
+    // Función llamada al presionar el botón "Iniciar sesión"
+    fun handleLogin() {
         errorMessage = null
-        if (email.isBlank() || password.isBlank()) {
-            errorMessage = "¡UPS! Parece que tu usuario o contraseña son incorrectos"
-        } else if (!isEmailValid(email)) {
-            errorMessage = "¡UPS! Parece que tu usuario o contraseña son incorrectos"
-        } else {
-            onLogin(email, password)
+        // Validaciones básicas
+        when {
+            email.isBlank() || password.isBlank() ->
+                errorMessage = "Completa ambos campos."
+            !isEmailValid(email) ->
+                errorMessage = "El formato de email no es válido."
+            else -> {
+                // Si pasa validaciones, intenta login
+                isLoading = true
+                onLogin(email, password) {
+                    isLoading = false
+                    if (it == null) {
+                        // Login exitoso
+                        onLoginSuccess()
+                    } else {
+                        // Muestra mensaje de error que le devuelve AuthRepository
+                        errorMessage = it
+                    }
+                }
+            }
         }
     }
 
@@ -47,6 +68,7 @@ fun LoginScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // Formulario central
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -86,12 +108,27 @@ fun LoginScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
-            // Botón para iniciar sesión
-            Button(onClick = { login() }, modifier = Modifier.fillMaxWidth()) {
-                Text("Iniciar sesión")
+            // Botón principal de login
+            Button(
+                onClick = { handleLogin() },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading
+            ) { Text("Iniciar sesión") }
+            // ProgressBar mientras está logeando
+            if (isLoading) {
+                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator()
             }
+            // Texto clickeable para ir al registro
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "¿Aún no tienes cuenta?",
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clickable(onClick = onGoToRegister)
+            )
         }
-        // Botón para regresar a la pantalla anterior
+        // Botón para regresar atrás
         Button(
             onClick = onBack, modifier = Modifier
                 .align(Alignment.TopStart)
