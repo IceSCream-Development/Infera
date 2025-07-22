@@ -19,16 +19,14 @@ object AuthRepository {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        // PRIMERO, comprobar que no existe ya ese username
-        db.collection("users")
-            .whereEqualTo("username", username)
-            .get()
-            .addOnSuccessListener { documents ->
-                if (!documents.isEmpty) {
+        // Verificar si el username ya existe usando la colección usernames
+        db.collection("usernames").document(username).get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
                     // Ya existe ese username
                     onError("Ese nombre de usuario ya está en uso. Prueba uno diferente.")
                 } else {
-                    // Si NO existe, continúa con el registro en Auth
+                    // Nombre de usuario disponible, continúa con el registro en Auth
                     auth.createUserWithEmailAndPassword(email, password)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
@@ -38,7 +36,24 @@ object AuthRepository {
                                     "email" to email
                                 )
                                 db.collection("users").document(uid).set(perfil)
-                                    .addOnSuccessListener { onSuccess() }
+                                    .addOnSuccessListener {
+                                        // Crear documento en usernames (con referencia al uid)
+                                        db.collection("usernames").document(username)
+                                            .set(mapOf("uid" to uid))
+                                            .addOnSuccessListener {
+                                                // Enviar correo de verificación antes de dar registro por exitoso
+                                                auth.currentUser?.sendEmailVerification()
+                                                    ?.addOnSuccessListener {
+                                                        onSuccess() // Registro correcto y correo enviado
+                                                    }
+                                                    ?.addOnFailureListener { e ->
+                                                        onError("No se pudo enviar el correo de verificación: " + e.message)
+                                                    }
+                                            }
+                                            .addOnFailureListener { e ->
+                                                onError("No se pudo guardar el nombre de usuario: ${e.message}")
+                                            }
+                                    }
                                     .addOnFailureListener { e ->
                                         onError("Hubo un problema guardando tu perfil. Intenta nuevamente.")
                                     }
@@ -54,8 +69,8 @@ object AuthRepository {
                         }
                 }
             }
-            .addOnFailureListener {
-                onError("No se pudo consultar el nombre de usuario. Intenta nuevamente.")
+            .addOnFailureListener { e ->
+                onError("No se pudo consultar el nombre de usuario: ${e.message}")
             }
     }
 
@@ -69,13 +84,50 @@ object AuthRepository {
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val uid = auth.currentUser!!.uid
+                    val user = auth.currentUser
+                    if (user != null && !user.isEmailVerified) {
+                        auth.signOut()
+                        onError("Debes verificar tu correo antes de iniciar sesión.")
+                        return@addOnCompleteListener
+                    }
+                    val uid = user!!.uid
                     db.collection("users").document(uid).get()
                         .addOnSuccessListener { doc ->
                             if (doc.exists()) onSuccess(doc.data!!)
                             else onError("No existe perfil guardado para este usuario")
                         }
                         .addOnFailureListener { e -> onError("Error buscando perfil: ${e.message}") }
+                } else {
+                    onError("Correo o contraseña incorrectos")
+                }
+            }
+    }
+
+    // Permite reenviar el correo de verificación a un email
+    fun resendVerificationEmail(
+        email: String,
+        password: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    if (user != null && !user.isEmailVerified) {
+                        user.sendEmailVerification()
+                            .addOnSuccessListener {
+                                auth.signOut()
+                                onSuccess() // Correo de verificación reenviado
+                            }
+                            .addOnFailureListener { e ->
+                                auth.signOut()
+                                onError("No se pudo reenviar el correo de verificación: ${e.message}")
+                            }
+                    } else {
+                        auth.signOut()
+                        onError("El usuario ya está verificado o no existe.")
+                    }
                 } else {
                     onError("Correo o contraseña incorrectos")
                 }
