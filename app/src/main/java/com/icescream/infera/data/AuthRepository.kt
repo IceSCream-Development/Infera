@@ -133,4 +133,94 @@ object AuthRepository {
                 }
             }
     }
+
+    // Obtener el perfil del usuario actual
+    fun getCurrentUserProfile(
+        onSuccess: (String, String, String) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            onError("No hay usuario autenticado.")
+            return
+        }
+        val uid = user.uid
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    val username = doc.getString("username") ?: ""
+                    val email = user.email ?: ""
+                    val fechaUnion = doc.getString("fechaUnion")
+                        ?: user.metadata?.creationTimestamp?.let {
+                            java.text.SimpleDateFormat("yyyy-MM-dd").format(java.util.Date(it))
+                        } ?: "Desconocido"
+                    onSuccess(username, email, fechaUnion)
+                } else {
+                    onError("No existe perfil para este usuario")
+                }
+            }
+            .addOnFailureListener { e -> onError("Error buscando perfil: ${e.message}") }
+    }
+
+    // Actualizar el nombre de usuario
+    fun updateUsername(
+        newUsername: String,
+        oldUsername: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val user = auth.currentUser ?: run {
+            onError("No hay usuario autenticado.")
+            return
+        }
+        val uid = user.uid
+        db.collection("usernames").document(newUsername).get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    onError("El nombre de usuario ya está en uso.")
+                } else {
+                    db.collection("users").document(uid)
+                        .update("username", newUsername)
+                        .addOnSuccessListener {
+                            db.collection("usernames").document(newUsername)
+                                .set(mapOf("uid" to uid))
+                                .addOnSuccessListener {
+                                    // Borrar el nombre anterior para liberarlo
+                                    db.collection("usernames").document(oldUsername).delete()
+                                        .addOnSuccessListener {
+                                            onSuccess()
+                                        }
+                                        .addOnFailureListener { e ->
+                                            onError("Error al liberar el nombre antiguo: ${e.message}")
+                                        }
+                                }
+                                .addOnFailureListener { e ->
+                                    onError("Error guardando nombre único: ${e.message}")
+                                }
+                        }
+                        .addOnFailureListener { e ->
+                            onError("No se pudo actualizar el nombre: ${e.message}")
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                onError("No se pudo consultar el nombre de usuario: ${e.message}")
+            }
+    }
+
+    // Cambiar contraseña
+    fun updatePassword(
+        newPassword: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            onError("No hay usuario autenticado.")
+            return
+        }
+        user.updatePassword(newPassword)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e -> onError("No se pudo cambiar la contraseña: ${e.message}") }
+    }
 }

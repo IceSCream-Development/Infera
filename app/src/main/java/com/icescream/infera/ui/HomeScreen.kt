@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 fun HomeScreen(
     seccionSeleccionada: Int,
     onSeleccionar: (Int) -> Unit,
-    contenido: @Composable () -> Unit
+    contenido: @Composable (PaddingValues) -> Unit
 ) {
     Scaffold(
         bottomBar = {
@@ -50,7 +50,7 @@ fun HomeScreen(
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
-            contenido()
+            contenido(paddingValues)
         }
     }
 }
