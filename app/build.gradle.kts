@@ -75,3 +75,8 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
 }
+//esto lo hizo fernando xddd pero aun no se como documentarlo pero es pa lo de los nivelesss
+dependencies {
+    // ... other dependencies
+    implementation("com.google.code.gson:gson:2.8.9")
+}
