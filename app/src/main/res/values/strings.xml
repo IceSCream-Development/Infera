@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Infera</string>
+    <string name="welcome_title">Bienvenido a</string>
+    <string name="presentation">Conviértete en un experto en finanzas. ¡Aprende, juega y mejora tus
+        hábitos económicos a tu manera!</string>
+    <string name="question">¿Ya tienes cuenta o quieres empezar\ndesde cero?</string>
 </resources>

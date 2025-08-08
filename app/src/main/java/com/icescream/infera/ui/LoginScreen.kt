@@ -8,7 +8,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.icescream.infera.ui.theme.InferaTheme
 
 /**
  * Pantalla de inicio de sesión con validación, opción a recibir mensaje de error externo,
@@ -41,7 +43,8 @@ fun LoginScreen(
         }
     }
 
-    // Estructura visual principal usando Box y Column (Jetpack Compose)
+
+     //Estructura visual principal usando Box y Column (Jetpack Compose)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -99,5 +102,22 @@ fun LoginScreen(
         ) {
             Text("Regresar")
         }
+    }
+}
+
+
+@Preview(showBackground = true, name = "Welcome Screen Preview")
+@Composable
+fun LoginScreenPreview() {
+    InferaTheme {
+        LoginScreen (
+            onLogin = { email, password ->
+                println("Preview: Login attempt with Email: $email, Password: $password")
+            },
+            onBack = {
+                println("Preview: Back button clicked")
+            },
+            errorMsg = "Invalid username or password."
+        )
     }
 }
