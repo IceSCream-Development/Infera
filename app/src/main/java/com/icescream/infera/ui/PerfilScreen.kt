@@ -143,9 +143,10 @@ fun PerfilScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Image(
-                            painter = painterResource(id = R.drawable.perfil_oinkies),
+                            painter = painterResource(id = R.drawable.perfil_streak),
                             contentDescription = null,
                             modifier = Modifier
+
                                 .clip(RoundedCornerShape(percent = 50)),
                             contentScale = ContentScale.Crop
                         )
