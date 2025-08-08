@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
                             contenido = {
                                 when (homeTabIndex) {
                                     0 -> AprendeScreen()
-                                    1 -> ChatBotScreen()
+                                    1 -> ChatBotScreen(onBack = { pantallaActual = "welcome" })
                                     2 -> LogrosScreen()
                                     3 -> LeccionesScreen()
                                     4 -> PerfilScreen()
