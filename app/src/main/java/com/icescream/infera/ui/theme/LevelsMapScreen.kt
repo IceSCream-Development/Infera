@@ -48,7 +48,8 @@ fun LevelsMapScreen(onLevelClick: (Level) -> Unit, isUnlocked: (Level) -> Boolea
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        reverseLayout = true
     ) {
         items(levels) { level ->
             val unlocked = isUnlocked(level)
