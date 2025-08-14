@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -28,11 +29,11 @@ import java.io.InputStreamReader
 /**
  * Pantalla que muestra el mapa de niveles.
  *
- * @param onLevelClick es una función que se llama cuando un nivel es presionado.
- * Pasa el objeto Level completo para que la pantalla de preguntas sepa qué mostrar.
+ * @param onLevelClick es una función que se llama cuando un nivel es presionado (si está desbloqueado).
+ * @param isUnlocked función que indica si un `Level` está desbloqueado.
  */
 @Composable
-fun LevelsMapScreen(onLevelClick: (Level) -> Unit) {
+fun LevelsMapScreen(onLevelClick: (Level) -> Unit, isUnlocked: (Level) -> Boolean) {
     val context = LocalContext.current
 
     val levels = remember {
@@ -50,9 +51,10 @@ fun LevelsMapScreen(onLevelClick: (Level) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         items(levels) { level ->
+            val unlocked = isUnlocked(level)
             LevelNode(
                 level = level,
-                // Aquí usamos el evento de clic y llamamos a la función onLevelClick
+                unlocked = unlocked,
                 onLevelClick = onLevelClick
             )
         }
@@ -60,14 +62,17 @@ fun LevelsMapScreen(onLevelClick: (Level) -> Unit) {
 }
 
 @Composable
-fun LevelNode(level: Level, onLevelClick: (Level) -> Unit) {
+fun LevelNode(level: Level, unlocked: Boolean, onLevelClick: (Level) -> Unit) {
+    val containerColor = if (unlocked) MaterialTheme.colorScheme.primary else Color.LightGray
+    val contentColor = if (unlocked) MaterialTheme.colorScheme.onPrimary else Color.DarkGray
+
     Card(
         shape = CircleShape,
         modifier = Modifier
             .size(80.dp)
-            .clickable { onLevelClick(level) }, // Hacemos que el Card sea clickable
+            .then(if (unlocked) Modifier.clickable { onLevelClick(level) } else Modifier),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary
+            containerColor = containerColor
         )
     ) {
         Box(
@@ -76,7 +81,7 @@ fun LevelNode(level: Level, onLevelClick: (Level) -> Unit) {
         ) {
             Text(
                 text = "${level.number}",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = contentColor,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
