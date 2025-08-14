@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.icescream.infera"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.icescream.infera"
         minSdk = 23
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -65,7 +65,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
     // Firebase dependencies
-    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
 
@@ -74,6 +74,4 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
-    // OkHttp para peticiones HTTP
-    implementation("com.squareup.okhttp3:okhttp:4.11.0")
 }
