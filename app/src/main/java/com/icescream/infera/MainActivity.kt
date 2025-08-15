@@ -126,8 +126,7 @@ class MainActivity : ComponentActivity() {
                                     0 -> AprendeScreen()
                                     1 -> ChatBotScreen()
                                     2 -> LogrosScreen()
-                                    3 -> LeccionesScreen()
-                                    4 -> PerfilScreen()
+                                    3 -> PerfilScreen()
                                 }
                             }
                         )

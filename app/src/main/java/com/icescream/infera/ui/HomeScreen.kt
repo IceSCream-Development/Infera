@@ -37,12 +37,6 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = seccionSeleccionada == 3,
                     onClick = { onSeleccionar(3) },
-                    label = { Text("Lecciones") },
-                    icon = { }
-                )
-                NavigationBarItem(
-                    selected = seccionSeleccionada == 4,
-                    onClick = { onSeleccionar(4) },
                     label = { Text("Perfil") },
                     icon = { }
                 )
