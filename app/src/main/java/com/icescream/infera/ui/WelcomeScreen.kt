@@ -43,7 +43,7 @@ fun WelcomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFFFAEF))
+            .background(MaterialTheme.colorScheme.background)
             .padding(top = 200.dp  )
     ) {
         Title(
@@ -82,7 +82,7 @@ fun Title(title1: String, title2: String, modifier: Modifier = Modifier) {
                 text = title1,
                 style = TextStyle(
                     fontFamily = poppins,
-                    color = Color(0xFF4B4A5D),
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 ),
@@ -123,7 +123,7 @@ fun Body(presentation: String, question: String, modifier: Modifier = Modifier) 
                 style = TextStyle(
                     fontFamily = poppins,
                     textAlign = TextAlign.Center,
-                    color = Color(0xFF4B4A5D),
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 15.sp
                 ),
                 modifier = modifier
@@ -141,7 +141,7 @@ fun Body(presentation: String, question: String, modifier: Modifier = Modifier) 
                 style = TextStyle(
                     fontFamily = poppins,
                     textAlign = TextAlign.Center,
-                    color = Color(0xFF4B4A5D),
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Light
                 ),

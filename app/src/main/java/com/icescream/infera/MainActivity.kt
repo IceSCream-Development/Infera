@@ -56,7 +56,10 @@ class MainActivity : ComponentActivity() {
                                 pantallaActual = "welcome"
                                 loginErrorMsg = null
                             },
-                            errorMsg = loginErrorMsg // <-- asegúrate que LoginScreen acepte este parámetro si quieres mostrar errores
+                            errorMsg = loginErrorMsg, // <-- asegúrate que LoginScreen acepte este parámetro si quieres mostrar errores
+                            onRegisterClick = {
+                                pantallaActual = "register"
+                            }
                         )
                     }
 
@@ -82,7 +85,10 @@ class MainActivity : ComponentActivity() {
                                 pantallaActual = "welcome"
                                 registerErrorMsg = null
                             },
-                            errorMsg = registerErrorMsg
+                            errorMsg = registerErrorMsg,
+                            onLoginClick = {
+                                pantallaActual = "login"
+                            }
                         )
                     }
 

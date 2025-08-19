@@ -7,7 +7,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,7 +38,8 @@ import com.icescream.infera.ui.theme.InferaTheme
 fun LoginScreen(
     onLogin: (String, String) -> Unit,
     onBack: () -> Unit,
-    errorMsg: String? = null
+    errorMsg: String? = null,
+    onRegisterClick: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -65,12 +68,12 @@ fun LoginScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .background(Color(0xFFFFFAEF))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .align(Alignment.Center)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 32.dp)
                 .padding(top = 64.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -125,7 +128,10 @@ fun LoginScreen(
                 )
             }
 
-            Footer(Modifier)
+            Footer(
+                Modifier,
+                onRegisterClick
+            )
 
 
         }
@@ -159,6 +165,7 @@ fun Title(modifier: Modifier){
     Text(
         text = "¡Bienvenido de vuelta!",
         style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 4.dp)
     )
@@ -166,9 +173,9 @@ fun Title(modifier: Modifier){
     Text(
         text = "Continua aprendiendo sobre finanzas a tu ritmo",
         style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground,
         textAlign = TextAlign.Center,
         modifier = Modifier.padding(bottom = 16.dp)
-
     )
 }
 
@@ -186,6 +193,7 @@ fun EntryBoxes(
     Text(
         text = "Email",
         style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground,
         textAlign = TextAlign.Start,
         modifier = Modifier
             .fillMaxWidth()
@@ -204,8 +212,8 @@ fun EntryBoxes(
         colors = TextFieldDefaults.colors(
             focusedIndicatorColor = Color.DarkGray,
             unfocusedIndicatorColor = Color.Transparent,
-            focusedContainerColor = Color(0xFFF0E9D7),
-            unfocusedContainerColor = Color(0xFFF0E9D7)
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            unfocusedContainerColor = MaterialTheme.colorScheme.secondary
         ),
 
     )
@@ -214,6 +222,7 @@ fun EntryBoxes(
     Text(
         text = "Contraseña",
         style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground,
         textAlign = TextAlign.Start,
         modifier = Modifier
             .fillMaxWidth()
@@ -233,8 +242,8 @@ fun EntryBoxes(
         colors = TextFieldDefaults.colors(
             focusedIndicatorColor = Color.DarkGray,
             unfocusedIndicatorColor = Color.Transparent,
-            focusedContainerColor = Color(0xFFF0E9D7),
-            unfocusedContainerColor = Color(0xFFF0E9D7),
+            focusedContainerColor = MaterialTheme.colorScheme.secondary,
+            unfocusedContainerColor = MaterialTheme.colorScheme.secondary,
             errorIndicatorColor = Color.Red
         ),
     )
@@ -243,7 +252,10 @@ fun EntryBoxes(
 
 //Footer to create an account and login with Facebook, Google and Apple
 @Composable
-fun Footer(modifier: Modifier) {
+fun Footer(
+    modifier: Modifier,
+    onRegisterClick: () -> Unit
+) {
 
     //Row to separate the footer, and write the text
     Row(
@@ -256,7 +268,7 @@ fun Footer(modifier: Modifier) {
         )
         Text(
             text = "O Inicia Sesión Con",
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(horizontal = 8.dp),
             style = MaterialTheme.typography.bodyMedium
         )
@@ -273,9 +285,9 @@ fun Footer(modifier: Modifier) {
             .padding(start = 25.dp, end = 25.dp, top = 20.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        Logos(logoResId = R.drawable.logo_fb, { println("Facebook") },modifier = Modifier) //This function are the logos
+        //Logos(logoResId = R.drawable.logo_fb, { println("Facebook") },modifier = Modifier) //This function are the logos
         Logos(logoResId = R.drawable.logo_google, { println("Google") } ,modifier = Modifier)
-        Logos(logoResId = R.drawable.logo_apple, { println("Apple") } ,modifier = Modifier)
+        //Logos(logoResId = R.drawable.logo_apple, { println("Apple") } ,modifier = Modifier)
     }
 
     //Row to separate the text and the Logos
@@ -289,14 +301,14 @@ fun Footer(modifier: Modifier) {
         Text(
             text = "¿No tienes una cuenta?",
             fontSize = 15.sp,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier,
         )
 
         TextButton(
             onClick = {
-
+                onRegisterClick()
             },
             modifier = Modifier
         ) {
@@ -312,7 +324,7 @@ fun Footer(modifier: Modifier) {
 
 @Composable
 fun Logos(@DrawableRes logoResId: Int,
-          OnClick: () -> Unit,
+          onClick: () -> Unit,
           modifier: Modifier){
     //Facebook Logo
     Box(
@@ -321,7 +333,7 @@ fun Logos(@DrawableRes logoResId: Int,
             .clip(RoundedCornerShape(percent = 50))
             .background(Color.White)
             .border(1.dp, Color.Gray, RoundedCornerShape(percent = 50))
-            .clickable(onClick = OnClick),
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Image(
@@ -347,7 +359,8 @@ fun LoginScreenPreview() {
             onBack = {
                 println("Preview: Back button clicked")
             },
-            errorMsg = "Invalid username or password."
+            errorMsg = "Invalid username or password.",
+            onRegisterClick = {}
         )
     }
 }

@@ -3,7 +3,9 @@ package com.icescream.infera.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,14 +22,17 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.icescream.infera.R
 import com.icescream.infera.ui.theme.InferaTheme
 import kotlinx.coroutines.launch
+import com.icescream.infera.ui.LoginScreen
 
 @Composable
 fun RegisterScreen(
     onRegister: (String, String, String, () -> Unit) -> Unit, // Ahora pasa un callback de éxito
     onBack: () -> Unit, // Llamada al presionar 'Regresar'
-    errorMsg: String? = null // Mensaje de error externo a mostrar (por ejemplo, desde el backend)
+    errorMsg: String? = null, // Mensaje de error externo a mostrar (por ejemplo, desde el backend)
+    onLoginClick: () -> Unit
 ) {
     // Estados para los datos del formulario
     var username by remember { mutableStateOf("") } // Nombre de usuario
@@ -76,12 +81,13 @@ fun RegisterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFFFFFAEF))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // Contenido central del formulario
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 32.dp), // Margen horizontal para apariencia limpia
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top
@@ -93,6 +99,7 @@ fun RegisterScreen(
                 Text(
                     text = "Nombre de Usuario",
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Start,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -103,13 +110,20 @@ fun RegisterScreen(
                     value = username,
                     onValueChange = { username = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground)
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground),
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.DarkGray,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondary
+                    ),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = "Email",
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Start,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -120,13 +134,20 @@ fun RegisterScreen(
                     value = email,
                     onValueChange = { email = it },
                     modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground)
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground),
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.DarkGray,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondary
+                    ),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 // Campo de contraseña (oculto)
                 Text(
                     text = "Contraseña",
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Start,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -138,7 +159,13 @@ fun RegisterScreen(
                     onValueChange = { password = it },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground)
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground),
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.DarkGray,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondary
+                    ),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 // Confirmación de contraseña
@@ -146,6 +173,7 @@ fun RegisterScreen(
                 Text(
                     text = "Confirmar Contraseña",
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Start,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -157,21 +185,54 @@ fun RegisterScreen(
                     onValueChange = { confirmPassword = it },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground)
+                    textStyle = TextStyle(color = MaterialTheme.colorScheme.onBackground),
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.DarkGray,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = MaterialTheme.colorScheme.secondary,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.secondary
+                    ),
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 // Prioridad de mensajes: primero errores de validación local, sino el error externo
                 val messageToShow = errorMessage ?: errorMsg
                 messageToShow?.let {
                     Text(it, color = MaterialTheme.colorScheme.error)
-                    Spacer(modifier = Modifier.height(8.dp))
+           
                 }
+
+                //Row to separate the footer, and write the text
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "O Registrate Con",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = Color.Gray
+                    )
+                }
+
+                Logos(
+                    logoResId = R.drawable.logo_google,
+                    { println("Google") },
+                    modifier = Modifier)
 
                 TermsAndConditionsCheckbox(
                     checked = checked,
                     onCheckedChange = { checked = it },
                     onTermsClick = { /* abrir pantalla de términos o navegador */ }
                 )
+
 
                 // Botón principal para registrarse
                 Button(
@@ -183,7 +244,7 @@ fun RegisterScreen(
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
+                        .height(48.dp)
                 )
 
                 {
@@ -194,21 +255,21 @@ fun RegisterScreen(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
-                        .padding(start = 25.dp, end = 25.dp, top = 30.dp),
+                        .padding(start = 25.dp, end = 25.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
 
                     Text(
                         text = "¿Ya tienes una cuenta?",
                         fontSize = 15.sp,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onBackground,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier,
                     )
 
                     TextButton(
                         onClick = {
-
+                            onLoginClick()
                         },
                         modifier = Modifier
                     ) {
@@ -252,12 +313,13 @@ fun TitleRegister(modifier: Modifier){
         text = "Infera",
         style = MaterialTheme.typography.titleLarge,
         modifier = Modifier
-            .padding(4.dp, bottom = 16.dp, top = 50.dp)
+            .padding(4.dp, bottom = 8.dp, top = 40.dp)
     )
 
     Text(
         text = "¡Nos alegra que estés aquí!",
         style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 4.dp)
     )
@@ -265,8 +327,9 @@ fun TitleRegister(modifier: Modifier){
     Text(
         text = "Aprende sobre finanzas a tu ritmo con la ayuda de Swiny",
         style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground,
         textAlign = TextAlign.Center,
-        modifier = Modifier.padding(bottom = 16.dp)
+        modifier = Modifier.padding(bottom = 4.dp)
 
     )
 }
@@ -279,13 +342,15 @@ fun TermsAndConditionsCheckbox(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(8.dp)
+        modifier = Modifier
+            .padding(vertical = 16.dp)
     ) {
         Checkbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = CheckboxDefaults.colors(
-                checkedColor = Color(0xFF6200EE) // morado similar al de la imagen
+                checkedColor = Color(0xFF6200EE),
+                checkmarkColor = Color(0xFFFFFAEF)
             )
         )
 
@@ -294,7 +359,7 @@ fun TermsAndConditionsCheckbox(
         Text(
             text = "Acepto los",
             fontSize = 15.sp,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onBackground,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier,
         )
@@ -308,7 +373,7 @@ fun TermsAndConditionsCheckbox(
             Text(
                 "Términos y Condiciones",
                 fontSize = 15.sp,
-                color = Color(0xFF4A90E2)
+                color = MaterialTheme.colorScheme.onBackground,
                 )
         }
 
@@ -330,7 +395,8 @@ fun RegisterScreenPreview() {
             onBack = {
                 println("Preview: Botón de volver presionado")
             },
-            errorMsg = null // Preview sin mensaje de error
+            errorMsg = null, // Preview sin mensaje de error
+            onLoginClick = {}
         )
     }
 }

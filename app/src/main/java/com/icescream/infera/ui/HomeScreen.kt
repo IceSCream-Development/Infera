@@ -1,8 +1,10 @@
 package com.icescream.infera.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,7 +18,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
-
+import com.icescream.infera.ui.theme.InferaTheme
+import com.icescream.infera.R
 /**
  * HomeScreen con barra de navegación inferior.
  * Incluye 5 secciones/tab-espacios. Las puedes personalizar fácilmente.
@@ -32,6 +35,15 @@ fun HomeScreen(
         "Principal", "Retos", "Progreso", "Perfil", "Ajustes"
     )
 
+    val icons = listOf(
+        painterResource(id = R.drawable.icon_aprende),
+        painterResource(id = R.drawable.icon_chatbot),
+        painterResource(id = R.drawable.icon_logros),
+        painterResource(id = R.drawable.icon_lecciones),
+        painterResource(id = R.drawable.icon_aprende),
+
+    )
+
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -43,8 +55,9 @@ fun HomeScreen(
                         icon = {
                             // Puedes cambiar los iconos por reales usando ImageVector o Painter
                             Icon(
-                                painter = painterResource(android.R.drawable.ic_menu_view),
-                                contentDescription = label
+                                painter = icons[index],
+                                contentDescription = label,
+                                modifier = Modifier.size(36.dp),
                             )
                         },
                         alwaysShowLabel = true
@@ -62,5 +75,13 @@ fun HomeScreen(
         ) {
             Text("Pantalla: " + items[seccionSeleccionada])
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Welcome Screen Preview")
+@Composable
+fun HomeScreenPreview() {
+    InferaTheme {
+        HomeScreen()
     }
 }
