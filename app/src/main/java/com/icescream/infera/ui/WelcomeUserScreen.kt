@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -81,8 +82,17 @@ fun WelcomeUserScreen(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth(0.6f)) {
-                Text("Vamos")
+            Button(
+                onClick = onContinue,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFE046)
+                ),
+                modifier = Modifier.fillMaxWidth(0.9f),
+            ) {
+                Text(
+                    "Vamos",
+                    color = Color(0xFF9C6A18)
+                )
             }
         }
     }
