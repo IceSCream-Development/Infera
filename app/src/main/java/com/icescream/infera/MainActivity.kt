@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             // Estado que decide cuál pantalla mostrar
-            var pantallaActual by remember { mutableStateOf("home") } // Posibles: "welcome", "login", "register", "welcomeUser", "home"
+            var pantallaActual by remember { mutableStateOf("welcome") } // Posibles: "welcome", "login", "register", "welcomeUser", "home"
             var registerErrorMsg by remember { mutableStateOf<String?>(null) }
             var loginErrorMsg by remember { mutableStateOf<String?>(null) }
             var homeTabIndex by remember { mutableStateOf(0) } // Indice de la sección activa de Home
