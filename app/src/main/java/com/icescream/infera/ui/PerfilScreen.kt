@@ -4,8 +4,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
@@ -14,12 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import com.icescream.infera.R
 import com.icescream.infera.viewmodel.ProfileViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -51,7 +55,20 @@ fun PerfilScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.perfil_blue_shape),
+            contentDescription = "Imagen de perfil",
+            modifier = Modifier
+                .fillMaxWidth()
+                .size(140.dp)
+                .width(100.dp)
+        )
+
         if (uiState.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else {
@@ -59,23 +76,15 @@ fun PerfilScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(24.dp))
-                // Imagen de perfil
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "Imagen de perfil",
-                    modifier = Modifier
-                        .size(96.dp)
-                        .clip(CircleShape)
-                )
                 // Nombre de usuario (encabezado)
                 Text(
                     text = uiState.username,
                     style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                 )
@@ -83,9 +92,89 @@ fun PerfilScreen(
                 Text(
                     text = "Miembro desde: ${uiState.fechaUnion}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.Gray,
+                    color = Color.White,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
+                // Imagen de perfil
+                Image(
+                    painter = painterResource(id = R.drawable.perfil_icon),
+                    contentDescription = "Imagen de perfil",
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(CircleShape)
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(start = 25.dp, end = 25.dp, top = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.perfil_oinkies),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(percent = 50)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Text(
+                            text = "723",
+                            fontSize = 16.sp,
+                            color = Color(0xFFB7760C),
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Oinkies Recolectados",
+                            fontSize = 12.sp,
+                            color = Color(0xFF9D9045),
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.perfil_oinkies),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(percent = 50)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Text(
+                            text = "3",
+                            fontSize = 16.sp,
+                            color = Color(0xFF7D1DD0),
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Días de Racha",
+                            fontSize = 12.sp,
+                            color = Color(0xFF9D9045),
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = Color.Gray
+                    )
+                }
                 HorizontalDivider()
                 Spacer(Modifier.height(16.dp))
                 val isDark = isSystemInDarkTheme()
@@ -93,6 +182,7 @@ fun PerfilScreen(
                 val labelColor = if (isDark) Color.LightGray else Color.DarkGray
                 val containerColor = if (isDark) Color(0xFF232323) else Color.White
                 val borderColor = if (isDark) Color.Gray else Color.LightGray
+
                 OutlinedTextField(
                     value = editableUsername,
                     onValueChange = { editableUsername = it },
@@ -198,7 +288,7 @@ fun PerfilScreen(
                     )
                 }
                 // Botones de acción ahora al final del scroll:
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(40.dp))
                 OutlinedButton(
                     onClick = onLogout,
                     modifier = Modifier
