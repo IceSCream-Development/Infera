@@ -16,6 +16,7 @@ import com.icescream.infera.ui.WelcomeScreen
 import com.icescream.infera.ui.WelcomeUserScreen
 import com.icescream.infera.ui.HomeScreen  // Import correcto de HomeScreen
 import com.icescream.infera.data.AuthRepository // Importa el AuthRepository singleton
+import com.icescream.infera.data.LogrosManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
@@ -41,7 +42,8 @@ class MainActivity : ComponentActivity() {
             var loginErrorMsg by remember { mutableStateOf<String?>(null) }
             var homeTabIndex by remember { mutableStateOf(0) } // Indice de la sección activa de Home
             var currentUsername by remember { mutableStateOf<String?>(null) } // Para personalizar WelcomeUserScreen
-
+            val context = this // Activity Context
+            val logrosManager = remember { LogrosManager(context) }
             // Usa el tema global
             InferaTheme {
                 when (pantallaActual) {

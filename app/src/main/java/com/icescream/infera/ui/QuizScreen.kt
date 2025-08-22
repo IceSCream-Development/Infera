@@ -32,16 +32,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.AlertDialog
+import com.icescream.infera.data.LogrosManager // Importación del gestor de logros
 
 /**
  * Pantalla que muestra las preguntas de un nivel con feedback visual y avance automático.
  *
  * @param level El objeto Level que contiene las preguntas a mostrar.
+ * @param logrosManager El gestor de logros para actualizar el progreso.
  * @param onBackClick Función para regresar a la pantalla anterior.
  * @param onLevelCompleted Función para notificar que el nivel ha sido completado.
  */
 @Composable
-fun QuizScreen(level: Level, onBackClick: () -> Unit, onLevelCompleted: (Level) -> Unit = {}) {
+fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Unit, onLevelCompleted: (Level) -> Unit = {}) {
     // Colores de feedback
     val correctGreen = Color(0xFF4CAF50)        // Verde
     val correctDarkGreen =
@@ -85,12 +87,12 @@ fun QuizScreen(level: Level, onBackClick: () -> Unit, onLevelCompleted: (Level) 
     }
 
     if (isLevelFinished) {
-        // Notificar sólo una vez que el nivel fue completado
-        LaunchedEffect(Unit) {
-            if (!hasReportedCompletion) {
-                hasReportedCompletion = true
-                onLevelCompleted(level)
-            }
+        // Mostrar pantalla de nivel completado y registrar logros especiales
+        val noMistakes = correctCount == questions.size // Si respondió todo bien
+        val hasMistakes = correctCount < questions.size // Si falló alguna
+        LaunchedEffect(level.number) {
+            logrosManager.onLevelFinished(noMistakes, level.number)
+            if (hasMistakes) logrosManager.onLevelCompletedWithMistake(level.number)
         }
         Box(
             modifier = Modifier
@@ -298,6 +300,9 @@ fun QuizScreen(level: Level, onBackClick: () -> Unit, onLevelCompleted: (Level) 
                                 if (isCorrectAns) {
                                     feedbackMsg = "¡Buen Trabajo! "
                                     lastAnswerIsCorrect = true
+                                    // Cuando la respuesta es correcta, llamamos al gestor de logros
+                                    logrosManager.onQuestionAnsweredCorrectly()
+                                    correctCount++
                                 } else {
                                     feedbackMsg = "¡Ups! Respuesta Incorrecta  -1"
                                     lastAnswerIsCorrect = false

@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import kotlinx.coroutines.*
 import com.icescream.infera.data.ChatRepository
+import com.icescream.infera.data.LogrosManager
+import androidx.compose.ui.platform.LocalContext
 
 // Modelo de mensaje
 data class ChatMessage(val text: String, val isUser: Boolean)
@@ -26,6 +28,12 @@ fun ChatBotScreen() {
         )
     }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val logrosManager = remember { LogrosManager(context) }
+
+    LaunchedEffect(Unit) {
+        logrosManager.onChatBotUsed()
+    }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(

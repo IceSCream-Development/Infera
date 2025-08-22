@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -49,6 +50,12 @@ fun PerfilScreen(
             delay(2000)
             profileViewModel.loadProfile() // recarga datos y limpia mensaje
         }
+    }
+
+    val context = LocalContext.current
+    val logrosManager = remember { com.icescream.infera.data.LogrosManager(context) }
+    LaunchedEffect(Unit) {
+        logrosManager.onPerfilVisited()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
