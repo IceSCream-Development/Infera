@@ -11,7 +11,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Color
-import android.util.Patterns // <--- Import necesario para validación
+import android.util.Patterns
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.icescream.infera.R
+import com.icescream.infera.data.AuthRepository
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Pantalla de inicio de sesión con validación, opción a recibir mensaje de error externo,
@@ -31,6 +39,9 @@ fun LoginScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) } // Mensajes de error
     var isLoading by remember { mutableStateOf(false) }         // Muestra un ProgressBar si se está logeando
     var passwordVisible by remember { mutableStateOf(false) }   // Si se muestra la contraseña
+    var isGoogleLoading by remember { mutableStateOf(false) }   // Loading extra para Google Sign-In
+
+    val context = LocalContext.current
 
     // Función para validar el formato de email
     fun isEmailValid(email: String): Boolean =
@@ -60,6 +71,48 @@ fun LoginScreen(
                 }
             }
         }
+    }
+
+    // --- GOOGLE SIGN-IN ---
+    val launcher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                try {
+                    val account = task.result
+                    val idToken = account.idToken
+                    if (idToken != null) {
+                        isGoogleLoading = true
+                        AuthRepository.loginWithGoogle(
+                            idToken = idToken,
+                            onSuccess = {
+                                isGoogleLoading = false
+                                onLoginSuccess()
+                            },
+                            onError = {
+                                isGoogleLoading = false
+                                errorMessage = it
+                            }
+                        )
+                    } else {
+                        errorMessage = "No se pudo obtener el token de Google."
+                    }
+                } catch (e: Exception) {
+                    errorMessage = "Fallo Google Sign-In: ${e.localizedMessage}"
+                }
+            } else {
+                errorMessage = "Google Sign-In cancelado."
+            }
+        }
+
+    fun launchGoogleSignIn() {
+        errorMessage = null
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        val client = GoogleSignIn.getClient(context, gso)
+        launcher.launch(client.signInIntent)
     }
 
     // Estructura visual principal usando Box y Column (Jetpack Compose)
@@ -112,14 +165,29 @@ fun LoginScreen(
             Button(
                 onClick = { handleLogin() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading
+                enabled = !isLoading && !isGoogleLoading
             ) { Text("Iniciar sesión") }
             // ProgressBar mientras está logeando
             if (isLoading) {
                 Spacer(modifier = Modifier.height(16.dp))
                 CircularProgressIndicator()
             }
-            // Texto clickeable para ir al registro
+
+            // --- Botón Google Sign-In ---
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = { launchGoogleSignIn() },
+                enabled = !isLoading && !isGoogleLoading,
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+            ) {
+                // Aquí puedes poner el logo de Google real tras agregarlo en drawable
+                Text("Iniciar sesión con Google", color = Color.Black)
+            }
+            if (isGoogleLoading) {
+                Spacer(modifier = Modifier.height(8.dp))
+                CircularProgressIndicator()
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "¿Aún no tienes cuenta?",

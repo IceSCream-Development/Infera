@@ -66,8 +66,12 @@ dependencies {
 
     // HTTP Client para backend
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
+
     // Gson para parseo de JSON y anotaciones SerializedName
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:21.1.1")
 
     // Firebase dependencies
     implementation(platform("com.google.firebase:firebase-bom:33.16.0"))

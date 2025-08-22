@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 
 /** Repositorio que maneja el registro y login con Firebase */
@@ -222,5 +223,111 @@ object AuthRepository {
         user.updatePassword(newPassword)
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener { e -> onError("No se pudo cambiar la contraseña: ${e.message}") }
+    }
+
+    // Login con Google y creación automática de perfil si es nuevo
+    fun loginWithGoogle(
+        idToken: String,
+        onSuccess: (profile: Map<String, Any>) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        auth.signInWithCredential(credential)
+            .addOnSuccessListener { result ->
+                val user = result.user
+                if (user == null) {
+                    onError("No se pudo obtener usuario desde Google")
+                    return@addOnSuccessListener
+                }
+                val uid = user.uid
+                val email = user.email ?: ""
+                val username = user.displayName ?: email.substringBefore("@")
+
+                // Buscar si ya tiene perfil en 'users'
+                db.collection("users").document(uid).get()
+                    .addOnSuccessListener { doc ->
+                        if (doc.exists()) {
+                            // Ya tiene perfil
+                            onSuccess(doc.data!!)
+                        } else {
+                            // Crear nuevo perfil
+                            val perfil = hashMapOf(
+                                "username" to username,
+                                "email" to email
+                            )
+                            db.collection("users").document(uid).set(perfil)
+                                .addOnSuccessListener {
+                                    // Guardar nombre de usuario en usernames sólo si no existe
+                                    db.collection("usernames").document(username).get()
+                                        .addOnSuccessListener { doc2 ->
+                                            if (!doc2.exists()) {
+                                                db.collection("usernames").document(username)
+                                                    .set(mapOf("uid" to uid))
+                                                    .addOnSuccessListener { onSuccess(perfil) }
+                                                    .addOnFailureListener { onSuccess(perfil) } // No bloquear login si falla
+                                            } else {
+                                                onSuccess(perfil)
+                                            }
+                                        }
+                                        .addOnFailureListener { onSuccess(perfil) }
+                                }
+                                .addOnFailureListener { e ->
+                                    onError("No se pudo crear perfil: ${e.message}")
+                                }
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        onError("Error buscando perfil de Google: ${e.message}")
+                    }
+            }
+            .addOnFailureListener { e ->
+                onError(e.message ?: "Error al autenticar con Google")
+            }
+    }
+
+    // Guarda el nivel completado en Firestore para el usuario actual
+    fun guardarNivelCompletado(
+        nivel: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            onError("No hay usuario autenticado.")
+            return
+        }
+        val uid = user.uid
+        db.collection("users").document(uid)
+            .update(
+                "niveles_completados",
+                com.google.firebase.firestore.FieldValue.arrayUnion(nivel)
+            )
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e -> onError("No se pudo guardar el nivel: " + e.message) }
+    }
+
+    // Recupera los niveles completados del usuario autenticado
+    fun obtenerProgresoNiveles(
+        onSuccess: (List<Int>) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            onError("No hay usuario autenticado.")
+            return
+        }
+        val uid = user.uid
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    val lista = doc.get("niveles_completados") as? List<Int> ?: listOf()
+                    onSuccess(lista)
+                } else {
+                    onSuccess(listOf()) // Si no hay documento, ningún nivel está completado
+                }
+            }
+            .addOnFailureListener { e ->
+                onError("No se pudo obtener el progreso: ${e.message}")
+            }
     }
 }

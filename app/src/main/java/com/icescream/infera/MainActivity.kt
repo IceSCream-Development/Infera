@@ -16,14 +16,27 @@ import com.icescream.infera.ui.WelcomeScreen
 import com.icescream.infera.ui.WelcomeUserScreen
 import com.icescream.infera.ui.HomeScreen  // Import correcto de HomeScreen
 import com.icescream.infera.data.AuthRepository // Importa el AuthRepository singleton
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+import android.util.Log
 
 // MainActivity es el punto de entrada de la app (actividad principal)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Forzar persistencia Firestore (por robustez, aunque es el default)
+        FirebaseFirestore.getInstance().firestoreSettings =
+            FirebaseFirestoreSettings.Builder().setPersistenceEnabled(true).build()
+        // SUGERIDO: INFORMAR a los usuarios que desactiven optimización de batería para la app en settings del sistema (no se puede automatizar en código Android)
         setContent {
-            // Estado que decide cuál pantalla mostrar
-            var pantallaActual by remember { mutableStateOf("welcome") } // Posibles: "welcome", "login", "register", "welcomeUser", "home"
+            val authUser = FirebaseAuth.getInstance().currentUser
+            Log.d(
+                "AUTHTEST",
+                "Usuario: " + (authUser?.email ?: "NULO") + ", UID: " + (authUser?.uid ?: "NULO")
+            )
+            val initialScreen = if (authUser != null) "welcomeUser" else "welcome"
+            var pantallaActual by remember { mutableStateOf(initialScreen) }
             var registerErrorMsg by remember { mutableStateOf<String?>(null) }
             var loginErrorMsg by remember { mutableStateOf<String?>(null) }
             var homeTabIndex by remember { mutableStateOf(0) } // Indice de la sección activa de Home

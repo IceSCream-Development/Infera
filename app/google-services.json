@@ -12,7 +12,20 @@
           "package_name": "com.icescream.infera"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "229022305497-f75brm9l6dp5uq8umnh1vsbnee820p87.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.icescream.infera",
+            "certificate_hash": "bd7763bbab982b944eb3a1119ab7bcaa8b91c8eb"
+          }
+        },
+        {
+          "client_id": "229022305497-3t5u568f3d40dntap0bigi6gl0nib0il.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCWyCmZ9ciyGCtOU58DMOLkHdP3zO__6lw"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "229022305497-3t5u568f3d40dntap0bigi6gl0nib0il.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

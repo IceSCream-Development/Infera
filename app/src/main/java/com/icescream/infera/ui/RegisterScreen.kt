@@ -12,6 +12,14 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import kotlinx.coroutines.launch
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.icescream.infera.R
+import com.icescream.infera.data.AuthRepository
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun RegisterScreen(
@@ -27,6 +35,8 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") } // Confirmación de contraseña
     var errorMessage by remember { mutableStateOf<String?>(null) } // Para mostrar mensajes de error
     var passwordVisible by remember { mutableStateOf(false) } // Para gestionar si vemos la contraseña (puedes expandir esto)
+    var isGoogleLoading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // Valida que el email tenga un formato correcto
     fun isEmailValid(email: String): Boolean =
@@ -57,7 +67,46 @@ fun RegisterScreen(
         }
     }
 
-    // Usamos Scaffold para mostrar Snackbar flotante cuando haya mensaje
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.result
+                val idToken = account.idToken
+                if (idToken != null) {
+                    isGoogleLoading = true
+                    AuthRepository.loginWithGoogle(
+                        idToken = idToken,
+                        onSuccess = {
+                            isGoogleLoading = false
+                            scope.launch { snackbarHostState.showSnackbar("Bienvenido/a con Google!") }
+                            onGoToLogin() 
+                        },
+                        onError = {
+                            isGoogleLoading = false
+                            errorMessage = it
+                        }
+                    )
+                } else {
+                    errorMessage = "No se pudo obtener el token de Google."
+                }
+            } catch (e: Exception) {
+                errorMessage = "Fallo Google Sign-In: ${e.localizedMessage}"
+            }
+        } else {
+            errorMessage = "Google Sign-In cancelado."
+        }
+    }
+    fun launchGoogleSignIn() {
+        errorMessage = null
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(context.getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        val client = GoogleSignIn.getClient(context, gso)
+        launcher.launch(client.signInIntent)
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
@@ -118,11 +167,21 @@ fun RegisterScreen(
                     Text(it, color = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                // Botón principal para registrarse
-                Button(onClick = { register() }, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { register() }, modifier = Modifier.fillMaxWidth(), enabled = !isGoogleLoading) {
                     Text("Registrarse")
                 }
-                // Texto clickeable para ir a inicio de sesión
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = { launchGoogleSignIn() },
+                    enabled = !isGoogleLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                ) {
+                    Text("Registrarte con Google", color = Color.Black)
+                }
+                if (isGoogleLoading) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CircularProgressIndicator()
+                }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "¿Ya tienes cuenta?",

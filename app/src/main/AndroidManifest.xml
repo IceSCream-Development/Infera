@@ -28,4 +28,8 @@
         </activity>
     </application>
 
+    <!-- Agrega default_web_client_id al archivo strings.xml (app/src/main/res/values/strings.xml):
+         <string name="default_web_client_id">AQUÍ_VA_TU_CLIENT_ID</string>
+    -->
+
 </manifest>
