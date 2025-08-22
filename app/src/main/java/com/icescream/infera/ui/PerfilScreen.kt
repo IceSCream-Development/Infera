@@ -146,7 +146,6 @@ fun PerfilScreen(
                             painter = painterResource(id = R.drawable.perfil_streak),
                             contentDescription = null,
                             modifier = Modifier
-
                                 .clip(RoundedCornerShape(percent = 50)),
                             contentScale = ContentScale.Crop
                         )
