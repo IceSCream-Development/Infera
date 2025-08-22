@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.icescream.infera.Level
+import com.icescream.infera.CoinManager
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -61,11 +63,15 @@ fun QuizScreen(level: Level, onBackClick: () -> Unit, onLevelCompleted: (Level) 
     }
 
     if (isLevelFinished) {
-        // Notificar sólo una vez que el nivel fue completado
+        val context = LocalContext.current
+        val monedasPorPregunta = if (questions.isNotEmpty()) 100 / questions.size else 0
+        val monedasGanadas = monedasPorPregunta * correctCount
         LaunchedEffect(Unit) {
             if (!hasReportedCompletion) {
                 hasReportedCompletion = true
                 onLevelCompleted(level)
+                // Usar CoinManager para otorgar monedas
+                CoinManager.getInstance(context).otorgarMonedasPorPregunta(correctCount)
             }
         }
         Box(
@@ -87,8 +93,16 @@ fun QuizScreen(level: Level, onBackClick: () -> Unit, onLevelCompleted: (Level) 
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
+                Text(
+                    text = "¡Ganaste $monedasGanadas monedas!",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color(0xFFECB400),
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
                 Button(onClick = onBackClick, modifier = Modifier.fillMaxWidth()) {
-                    Text("Volver al mapa de niveles")
+                    Text(text = "Volver al mapa de niveles")
                 }
             }
         }

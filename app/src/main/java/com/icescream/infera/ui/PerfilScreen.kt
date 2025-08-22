@@ -24,6 +24,8 @@ import com.icescream.infera.R
 import com.icescream.infera.viewmodel.ProfileViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import com.icescream.infera.CoinManager
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Pantalla de perfil del usuario. Aquí puede ver/editar su información.
@@ -78,6 +80,16 @@ fun PerfilScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                )
+                // Mostrar monedas
+                val context = LocalContext.current
+                val coins = remember { mutableStateOf(CoinManager.getInstance(context).coins) }
+                Text(
+                    text = "Monedas: ${coins.value}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color(0xFFECB400),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
                 // Fecha de unión
                 Text(

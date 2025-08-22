@@ -12,12 +12,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import kotlinx.coroutines.*
 import com.icescream.infera.data.ChatRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import com.icescream.infera.CoinManager
+import androidx.compose.ui.platform.LocalContext
 
 // Modelo de mensaje
 data class ChatMessage(val text: String, val isUser: Boolean)
 
 @Composable
 fun ChatBotScreen() {
+    val context = LocalContext.current
+    val coins = CoinManager.getInstance(context).coins
     var prompt by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val messages = remember {
@@ -34,6 +41,13 @@ fun ChatBotScreen() {
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Mostrar el saldo de monedas en la parte superior
+            Text(
+                text = "Monedas: $coins",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(8.dp))
             Text("Gemini Playground", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(16.dp))
             LazyColumn(
@@ -79,6 +93,17 @@ fun ChatBotScreen() {
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = {
+                    val coinManager = CoinManager.getInstance(context)
+                    if (!coinManager.puedeHablarConBot()) {
+                        messages.add(
+                            ChatMessage(
+                                "No tienes suficientes monedas para hablar con el bot.",
+                                false
+                            )
+                        )
+                        return@Button
+                    }
+                    coinManager.cobrarPorBot()
                     val userPrompt = prompt.trim()
                     if (userPrompt.isEmpty()) return@Button
                     isLoading = true
