@@ -87,12 +87,12 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
     }
 
     if (isLevelFinished) {
-        // Mostrar pantalla de nivel completado y registrar logros especiales
-        val noMistakes = correctCount == questions.size // Si respondió todo bien
-        val hasMistakes = correctCount < questions.size // Si falló alguna
-        LaunchedEffect(level.number) {
-            logrosManager.onLevelFinished(noMistakes, level.number)
-            if (hasMistakes) logrosManager.onLevelCompletedWithMistake(level.number)
+        // Notificar sólo una vez que el nivel fue completado
+        LaunchedEffect(Unit) {
+            if (!hasReportedCompletion) {
+                hasReportedCompletion = true
+                onLevelCompleted(level)
+            }
         }
         Box(
             modifier = Modifier
@@ -164,186 +164,193 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.FillBounds
             )
+            // Número de pregunta fijo centrado (aprox. igual altura actual)
+            Text(
+                text = "${(currentQuestionIndex + 1)} de ${questions.size}",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 30.dp) // Ajusta este padding según la altura que quieras
+            )
             // CONTENIDO DEL QUIZ ENCIMA
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Barra superior personalizada
-                Row(
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp, horizontal = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxSize()
+                        .padding(bottom = 68.dp), // Ajustamos para dejar espacio al botón
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
+                    // Barra superior personalizada
+                    Row(
                         modifier = Modifier
-                            .size(44.dp)
-                            .clickable(onClick = onBackClick)
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp, horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.back_buttom),
-                            contentDescription = "Regresar",
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Box(
-                        modifier = Modifier.weight(1f), contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "${(currentQuestionIndex + 1)} de ${questions.size}",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White,
+                        Box(
                             modifier = Modifier
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Box(
-                        modifier = Modifier
-                            .background(Color.White, shape = MaterialTheme.shapes.medium)
-                            .height(32.dp)
-                            .padding(horizontal = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                .size(44.dp)
+                                .clickable(onClick = onBackClick)
+                        ) {
                             Image(
-                                painter = painterResource(id = R.drawable.lives),
-                                contentDescription = "Vidas",
-                                modifier = Modifier.size(22.dp)
+                                painter = painterResource(id = R.drawable.back_buttom),
+                                contentDescription = "Regresar",
+                                modifier = Modifier.fillMaxSize()
                             )
-                            Text(
-                                text = "$vidas",
-                                color = Color(0xFF23235D),
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                modifier = Modifier.padding(start = 3.dp)
-                            )
-                            if (vidas < LivesManager.getMaxLives()) {
-                                Text(
-                                    text = "  " + formatTime(tiempoRestanteMs),
-                                    color = Color(0xFF23235D),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    modifier = Modifier.padding(start = 2.dp)
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Box(
+                            modifier = Modifier.weight(1f), contentAlignment = Alignment.Center
+                        ) {
+                            // Eliminado el número de pregunta de aquí (ahora está fijo superpuesto)
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(Color.White, shape = MaterialTheme.shapes.medium)
+                                .height(32.dp)
+                                .padding(horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.lives),
+                                    contentDescription = "Vidas",
+                                    modifier = Modifier.size(22.dp)
                                 )
+                                Text(
+                                    text = "$vidas",
+                                    color = Color(0xFF23235D),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    modifier = Modifier.padding(start = 3.dp)
+                                )
+                                if (vidas < LivesManager.getMaxLives()) {
+                                    Text(
+                                        text = "  " + formatTime(tiempoRestanteMs),
+                                        color = Color(0xFF23235D),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        modifier = Modifier.padding(start = 2.dp)
+                                    )
+                                }
                             }
                         }
                     }
-                }
-                // Barra de progreso horizontal
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(12.dp)
-                        .padding(horizontal = 22.dp)
-                ) {
+                    // Barra de progreso horizontal
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(8.dp)
-                            .background(Color(0xFFE1CFFE), shape = MaterialTheme.shapes.medium)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth((currentQuestionIndex + 1) / questions.size.toFloat())
-                            .height(8.dp)
-                            .background(Color(0xFF6B50DE), shape = MaterialTheme.shapes.medium)
-                    )
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-                // SIN CARD: solo mostraremos el contenido directamente sobre el fondo
-                Spacer(modifier = Modifier.height(32.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .padding(horizontal = 16.dp)
-                        .defaultMinSize(minHeight = 320.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = level.name, // Título dinámico del nivel
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF6E6B7B),
-                        modifier = Modifier.align(Alignment.Start)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = currentQuestion.text,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF23235D),
-                        modifier = Modifier.align(Alignment.Start)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    // Opciones tipo botón con borde redondeado
-                    shuffledAnswers.forEachIndexed { index, answer ->
-                        val isSelected = selectedAnswerIndex == index
-                        val showFeedback = selectedAnswerIndex != null && isShowingFeedback
-                        val isCorrectAns = answer.isCorrect
-                        val isCorrectSelection = isSelected && isCorrectAns && showFeedback
-                        val isIncorrectSelection = isSelected && !isCorrectAns && showFeedback
-                        val shouldHighlightCorrect =
-                            showFeedback && isCorrectAns && selectedAnswerIndex != null && !isSelected && !shuffledAnswers[selectedAnswerIndex!!].isCorrect
-                        val borderColor = when {
-                            isCorrectSelection || shouldHighlightCorrect -> feedbackGreen
-                            isIncorrectSelection -> feedbackRed
-                            else -> borderDefault
-                        }
-                        val bgColor = when {
-                            isCorrectSelection || shouldHighlightCorrect -> correctBg
-                            isIncorrectSelection -> incorrectBg
-                            else -> Color.White
-                        }
-                        Button(
-                            onClick = {
-                                selectedAnswerIndex = index
-                                isShowingFeedback = false
-                                if (isCorrectAns) {
-                                    feedbackMsg = "¡Buen Trabajo! "
-                                    lastAnswerIsCorrect = true
-                                    // Cuando la respuesta es correcta, llamamos al gestor de logros
-                                    logrosManager.onQuestionAnsweredCorrectly()
-                                    correctCount++
-                                } else {
-                                    feedbackMsg = "¡Ups! Respuesta Incorrecta  -1"
-                                    lastAnswerIsCorrect = false
-                                    vidasVm.perderVida() // <-- Disminuye vidas con el vm
-                                }
-                                isShowingFeedback = true
-                            },
+                            .height(8.dp) // Ajuste aquí: ahora es igual a las barras internas
+                            .padding(horizontal = 22.dp)
+                    ) {
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 6.dp)
-                                .border(2.dp, borderColor, shape = MaterialTheme.shapes.medium)
-                                .background(bgColor, shape = MaterialTheme.shapes.medium),
-                            shape = MaterialTheme.shapes.medium,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = bgColor,
-                                contentColor = Color(0xFF23235D)
-                            ),
-                            enabled = !isShowingFeedback && vidas > 0,
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-                        ) {
+                                .height(8.dp)
+                                .background(Color(0xFFE1CFFE), shape = MaterialTheme.shapes.medium)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth((currentQuestionIndex + 1) / questions.size.toFloat())
+                                .height(8.dp)
+                                .background(Color(0xFF6B50DE), shape = MaterialTheme.shapes.medium)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    // SIN CARD: solo mostraremos el contenido directamente sobre el fondo
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f)
+                            .padding(horizontal = 16.dp)
+                            .defaultMinSize(minHeight = 320.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = level.name, // Título dinámico del nivel
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFF6E6B7B),
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = currentQuestion.text,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF23235D),
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        // Opciones tipo botón con borde redondeado
+                        shuffledAnswers.forEachIndexed { index, answer ->
+                            val isSelected = selectedAnswerIndex == index
+                            val showFeedback = selectedAnswerIndex != null && isShowingFeedback
+                            val isCorrectAns = answer.isCorrect
+                            val isCorrectSelection = isSelected && isCorrectAns && showFeedback
+                            val isIncorrectSelection = isSelected && !isCorrectAns && showFeedback
+                            val shouldHighlightCorrect =
+                                showFeedback && isCorrectAns && selectedAnswerIndex != null && !isSelected && !shuffledAnswers[selectedAnswerIndex!!].isCorrect
+                            val borderColor = when {
+                                isCorrectSelection || shouldHighlightCorrect -> feedbackGreen
+                                isIncorrectSelection -> feedbackRed
+                                else -> borderDefault
+                            }
+                            val bgColor = when {
+                                isCorrectSelection || shouldHighlightCorrect -> correctBg
+                                isIncorrectSelection -> incorrectBg
+                                else -> Color.White
+                            }
+                            Button(
+                                onClick = {
+                                    selectedAnswerIndex = index
+                                    isShowingFeedback = false
+                                    if (isCorrectAns) {
+                                        feedbackMsg = "¡Buen Trabajo! "
+                                        lastAnswerIsCorrect = true
+                                        // Cuando la respuesta es correcta, llamamos al gestor de logros
+                                        logrosManager.onQuestionAnsweredCorrectly()
+                                    } else {
+                                        feedbackMsg = "¡Ups! Respuesta Incorrecta  -1"
+                                        lastAnswerIsCorrect = false
+                                        vidasVm.perderVida() // <-- Disminuye vidas con el vm
+                                    }
+                                    isShowingFeedback = true
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .border(2.dp, borderColor, shape = MaterialTheme.shapes.medium)
+                                    .background(bgColor, shape = MaterialTheme.shapes.medium),
+                                shape = MaterialTheme.shapes.medium,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = bgColor,
+                                    contentColor = Color(0xFF23235D)
+                                ),
+                                enabled = !isShowingFeedback && vidas > 0,
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                            ) {
+                                Text(
+                                    text = answer.text,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Color(0xFF23235D),
+                                    textAlign = TextAlign.Start,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                        // Feedback textual debajo de las opciones
+                        if (isShowingFeedback && feedbackMsg != null) {
                             Text(
-                                text = answer.text,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color(0xFF23235D),
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier.fillMaxWidth()
+                                text = feedbackMsg ?: "",
+                                color = if (lastAnswerIsCorrect == true) feedbackGreen else feedbackRed,
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(top = 12.dp)
                             )
                         }
                     }
-                    // Feedback textual debajo de las opciones
-                    if (isShowingFeedback && feedbackMsg != null) {
-                        Text(
-                            text = feedbackMsg ?: "",
-                            color = if (lastAnswerIsCorrect == true) feedbackGreen else feedbackRed,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(top = 12.dp)
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(38.dp))
                 }
-                Spacer(modifier = Modifier.height(38.dp))
-                // Botón continuar al fondo
+                // Botón continuar fijo abajo
                 val continuarEnabled = isShowingFeedback && selectedAnswerIndex != null && vidas > 0
                 Button(
                     onClick = {
@@ -358,8 +365,9 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                     },
                     enabled = continuarEnabled,
                     modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 48.dp, vertical = 20.dp)
                         .fillMaxWidth()
-                        .padding(horizontal = 48.dp)
                         .height(48.dp)
                         .background(
                             if (continuarEnabled) yellowBtn else greyBtn,

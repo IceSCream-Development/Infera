@@ -12,8 +12,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import kotlinx.coroutines.*
 import com.icescream.infera.data.ChatRepository
-import com.icescream.infera.data.LogrosManager
 import androidx.compose.ui.platform.LocalContext
+import com.icescream.infera.data.LogrosManager
+import android.content.Context
+import android.content.SharedPreferences
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 // Modelo de mensaje
 data class ChatMessage(val text: String, val isUser: Boolean)
@@ -22,17 +26,38 @@ data class ChatMessage(val text: String, val isUser: Boolean)
 fun ChatBotScreen() {
     var prompt by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-    val messages = remember {
-        mutableStateListOf(
-            ChatMessage("¡Hola! ¿En qué puedo ayudarte?", false)
-        )
-    }
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val logrosManager = remember { LogrosManager(context) }
+    val prefs = remember { context.getSharedPreferences("chatbot_history", Context.MODE_PRIVATE) }
+    val gson = remember { Gson() }
 
-    LaunchedEffect(Unit) {
-        logrosManager.onChatBotUsed()
+    // Función para leer historial guardado
+    fun loadHistory(): MutableList<ChatMessage> {
+        val json = prefs.getString("history", null)
+        return if (json != null) {
+            val type = object : TypeToken<MutableList<ChatMessage>>() {}.type
+            gson.fromJson(json, type)
+        } else {
+            mutableListOf(ChatMessage("¡Hola! ¿En qué puedo ayudarte?", false))
+        }
+    }
+
+    // Función para guardar historial
+    fun saveHistory(history: List<ChatMessage>) {
+        val json = gson.toJson(history)
+        prefs.edit().putString("history", json).apply()
+    }
+
+    val initialMessages = loadHistory()
+    val messages =
+        remember { mutableStateListOf<ChatMessage>().also { it.addAll(initialMessages) } }
+
+    val scope = rememberCoroutineScope()
+    val logrosManager = remember { LogrosManager(context) }
+    LaunchedEffect(Unit) { logrosManager.onChatBotUsed() }
+
+    fun addMessageAndPersist(msg: ChatMessage) {
+        messages.add(msg)
+        saveHistory(messages)
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
@@ -90,14 +115,14 @@ fun ChatBotScreen() {
                     val userPrompt = prompt.trim()
                     if (userPrompt.isEmpty()) return@Button
                     isLoading = true
-                    messages.add(ChatMessage(userPrompt, true))
+                    addMessageAndPersist(ChatMessage(userPrompt, true))
                     prompt = ""
                     scope.launch {
                         try {
                             val reply = ChatRepository.sendMessage(userPrompt)
-                            messages.add(ChatMessage(reply, false))
+                            addMessageAndPersist(ChatMessage(reply, false))
                         } catch (e: Exception) {
-                            messages.add(
+                            addMessageAndPersist(
                                 ChatMessage(
                                     "Error de conexión o respuesta del servidor",
                                     false

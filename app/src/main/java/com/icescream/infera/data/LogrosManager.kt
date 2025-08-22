@@ -1,15 +1,16 @@
 package com.icescream.infera.data
 
 import android.content.Context
-import android.content.SharedPreferences
 import com.google.gson.Gson
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.auth.FirebaseAuth
 
 /**
  * Clase que gestiona la lógica de los logros.
  * Aquí se definen los logros, se verifica si están completados
  * y se guarda el progreso del usuario.
  */
-class LogrosManager(context: Context) {
+class LogrosManager(private val context: Context) {
 
     // Lista de todos los logros disponibles en la aplicación
     private val allLogros = listOf(
@@ -59,11 +60,6 @@ class LogrosManager(context: Context) {
             description = "Completa un nivel sin equivocarte."
         ),
         Logro(
-            id = "first_attempt_level_completed",
-            title = "Primer intento",
-            description = "Completa un nivel en el primer intento."
-        ),
-        Logro(
             id = "chatbot_used",
             title = "Conversador",
             description = "Usa el ChatBot por primera vez."
@@ -90,26 +86,43 @@ class LogrosManager(context: Context) {
         )
     )
 
-    // Usamos SharedPreferences para guardar el progreso del usuario
-    private val sharedPrefs: SharedPreferences =
-        context.getSharedPreferences("user_progress", Context.MODE_PRIVATE)
-
-    // Keys para guardar el progreso
-    private val KEY_CORRECT_ANSWERS = "correct_answers_count"
-    private val KEY_LEVELS_COMPLETED = "levels_completed"
-    private val KEY_UNLOCKED_LOGROS = "unlocked_logros"
-    private val KEY_DAYS_PLAYED = "days_played"
-    private val KEY_CHATBOT_USED = "chatbot_used"
-    private val KEY_LOGROS_VISITED = "logros_visited"
-    private val KEY_PERFIL_VISITED = "perfil_visited"
-    private val KEY_APRENDE_VISITED = "aprende_visited"
-    private val KEY_SECCIONES_VISITADAS = "secciones_visitadas"
-    private val KEY_LEVELS_WITH_MISTAKES = "levels_with_mistakes"
+    // Usamos Firestore para guardar el progreso del usuario
+    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     // Inicializamos el progreso del usuario
-    private var correctAnswersCount = sharedPrefs.getInt(KEY_CORRECT_ANSWERS, 0)
-    private var unlockedLogrosIds: Set<String> =
-        sharedPrefs.getStringSet(KEY_UNLOCKED_LOGROS, emptySet()) ?: emptySet()
+    private var correctAnswersCount: Int = 0
+    private var unlockedLogrosIds: Set<String> = emptySet()
+
+    init {
+        // Al inicializar, sincroniza los contadores y flags relevantes desde Firestore
+        syncLogrosWithFirestore {}
+        syncCorrectAnswersFromFirestore {}
+        syncDaysPlayedFromFirestore {}
+        syncLevelsWithMistakesFromFirestore {}
+        syncSectionFlagsFromFirestore {}
+    }
+
+    // Nueva función para sincronizar logros con Firestore
+    fun syncLogrosWithFirestore(onFinished: () -> Unit = {}) {
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val lista = doc.get("logros_desbloqueados") as? List<String> ?: emptyList()
+                unlockedLogrosIds = lista.toSet()
+                onFinished()
+            }
+            .addOnFailureListener { onFinished() }
+    }
+
+    // Nueva función para guardar logros completados en Firestore
+    private fun saveLogrosToFirestore() {
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid)
+            .update("logros_desbloqueados", unlockedLogrosIds.toList())
+    }
 
     /**
      * Devuelve la lista de logros con su estado actual (completado o no).
@@ -129,9 +142,15 @@ class LogrosManager(context: Context) {
      * Llama a esta función cada vez que el usuario responde una pregunta correctamente.
      */
     fun onQuestionAnsweredCorrectly() {
-        correctAnswersCount++
-        sharedPrefs.edit().putInt(KEY_CORRECT_ANSWERS, correctAnswersCount).apply()
-        checkAndUnlockLogros()
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val actual = (doc.getLong("correct_answers_count") ?: 0L).toInt() + 1
+                correctAnswersCount = actual
+                db.collection("users").document(uid).update("correct_answers_count", actual)
+                checkAndUnlockLogros()
+            }
     }
 
     /**
@@ -139,11 +158,54 @@ class LogrosManager(context: Context) {
      * @param levelNumber El número del nivel completado.
      */
     fun onLevelCompleted(levelNumber: Int) {
-        val completedLevels = sharedPrefs.getStringSet(KEY_LEVELS_COMPLETED, mutableSetOf())
-        val updatedLevels = (completedLevels ?: mutableSetOf()).toMutableSet()
-        updatedLevels.add(levelNumber.toString())
-        sharedPrefs.edit().putStringSet(KEY_LEVELS_COMPLETED, updatedLevels).apply()
-        checkAndUnlockLogros()
+        checkAndUnlockLogrosWithNiveles(levelNumber)
+    }
+
+    /**
+     * Verifica si se cumplen las condiciones para desbloquear un logro con niveles.
+     */
+    fun checkAndUnlockLogrosWithNiveles(levelNumber: Int) {
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val nivelesCompletados = doc.get("niveles_completados") as? List<Int> ?: emptyList()
+                val updatedNivelesCompletados = nivelesCompletados.toMutableList()
+                if (!updatedNivelesCompletados.contains(levelNumber)) {
+                    updatedNivelesCompletados.add(levelNumber)
+                    db.collection("users").document(uid)
+                        .update("niveles_completados", updatedNivelesCompletados)
+                    checkAndUnlockLogrosWithNivelesList(updatedNivelesCompletados)
+                }
+            }
+    }
+
+    /**
+     * Verifica si se cumplen las condiciones para desbloquear un logro con niveles.
+     */
+    fun checkAndUnlockLogrosWithNivelesList(nivelesCompletados: List<Int>) {
+        val unlockedLogros = unlockedLogrosIds.toMutableSet()
+        // Regla: Nivel 1 completado
+        if (nivelesCompletados.contains(1) && !unlockedLogros.contains("first_level_completed")) {
+            unlockedLogros.add("first_level_completed")
+        }
+        // Regla: 3 niveles completados
+        if (nivelesCompletados.size >= 3 && !unlockedLogros.contains("three_levels_completed")) {
+            unlockedLogros.add("three_levels_completed")
+        }
+        // Regla: 5 niveles completados
+        if (nivelesCompletados.size >= 5 && !unlockedLogros.contains("five_levels_completed")) {
+            unlockedLogros.add("five_levels_completed")
+        }
+        // Regla: 10 niveles completados
+        if (nivelesCompletados.size >= 10 && !unlockedLogros.contains("ten_levels_completed")) {
+            unlockedLogros.add("ten_levels_completed")
+        }
+        // Después, actualizar si hay cambios
+        if (unlockedLogros.size > unlockedLogrosIds.size) {
+            unlockedLogrosIds = unlockedLogros
+            saveLogrosToFirestore()
+        }
     }
 
     /**
@@ -157,29 +219,10 @@ class LogrosManager(context: Context) {
             unlockedLogros.add("five_questions_correct")
         }
 
-        // Regla: Nivel 1 completado
-        val completedLevels = sharedPrefs.getStringSet(KEY_LEVELS_COMPLETED, emptySet())
-        if (completedLevels?.contains("1") == true && !unlockedLogros.contains("first_level_completed")) {
-            unlockedLogros.add("first_level_completed")
-        }
-
-        // Regla: 3 niveles completados
-        if ((completedLevels?.size ?: 0) >= 3 && !unlockedLogros.contains("three_levels_completed")) {
-            unlockedLogros.add("three_levels_completed")
-        }
-
         // Regla: 20 preguntas correctas
         if (correctAnswersCount >= 20 && !unlockedLogros.contains("twenty_questions_correct")) {
             unlockedLogros.add("twenty_questions_correct")
         }
-
-        // Regla: 5 niveles completados
-        if ((completedLevels?.size
-                ?: 0) >= 5 && !unlockedLogros.contains("five_levels_completed")
-        ) {
-            unlockedLogros.add("five_levels_completed")
-        }
-
         // 10 y 50 preguntas correctas
         if (correctAnswersCount >= 10 && !unlockedLogros.contains("ten_questions_correct")) {
             unlockedLogros.add("ten_questions_correct")
@@ -187,20 +230,10 @@ class LogrosManager(context: Context) {
         if (correctAnswersCount >= 50 && !unlockedLogros.contains("fifty_questions_correct")) {
             unlockedLogros.add("fifty_questions_correct")
         }
-        // 10 niveles completados
-        if ((completedLevels?.size
-                ?: 0) >= 10 && !unlockedLogros.contains("ten_levels_completed")
-        ) {
-            unlockedLogros.add("ten_levels_completed")
-        }
-        // Eventos especiales, para usar desde las pantallas:
-        // desbloquear "perfect_level_completed", "first_attempt_level_completed", "chatbot_used",
-        // "logros_visited", "seven_days_played", "three_levels_wrong_answer", "all_sections_opened"
-
-        // Si se desbloqueó algún logro, actualizamos las SharedPreferences
+        // Eventos especiales y preguntas siguen funcionando igual
         if (unlockedLogros.size > unlockedLogrosIds.size) {
             unlockedLogrosIds = unlockedLogros
-            sharedPrefs.edit().putStringSet(KEY_UNLOCKED_LOGROS, unlockedLogrosIds).apply()
+            saveLogrosToFirestore()
         }
     }
 
@@ -210,57 +243,82 @@ class LogrosManager(context: Context) {
             val unlockedLogros = unlockedLogrosIds.toMutableSet()
             unlockedLogros.add(logroId)
             unlockedLogrosIds = unlockedLogros
-            sharedPrefs.edit().putStringSet(KEY_UNLOCKED_LOGROS, unlockedLogrosIds).apply()
+            saveLogrosToFirestore()
         }
     }
 
     // ChatBot usado
     fun onChatBotUsed() {
-        sharedPrefs.edit().putBoolean(KEY_CHATBOT_USED, true).apply()
-        unlockLogro("chatbot_used")
-        checkAllSectionsVisited()
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).update("chatbot_used", true)
+            .addOnSuccessListener {
+                unlockLogro("chatbot_used")
+                checkAllSectionsVisited()
+            }
+            .addOnFailureListener {}
     }
 
     // Sección logros visitada
     fun onLogrosVisited() {
-        sharedPrefs.edit().putBoolean(KEY_LOGROS_VISITED, true).apply()
-        unlockLogro("logros_visited")
-        checkAllSectionsVisited()
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).update("logros_visited", true)
+            .addOnSuccessListener {
+                unlockLogro("logros_visited")
+                checkAllSectionsVisited()
+            }
+            .addOnFailureListener {}
     }
 
     // Visita Perfil
     fun onPerfilVisited() {
-        sharedPrefs.edit().putBoolean(KEY_PERFIL_VISITED, true).apply()
-        checkAllSectionsVisited()
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).update("perfil_visited", true)
+            .addOnSuccessListener { checkAllSectionsVisited() }
+            .addOnFailureListener {}
     }
 
     // Visita Aprende
     fun onAprendeVisited() {
-        sharedPrefs.edit().putBoolean(KEY_APRENDE_VISITED, true).apply()
-        checkAllSectionsVisited()
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).update("aprende_visited", true)
+            .addOnSuccessListener { checkAllSectionsVisited() }
+            .addOnFailureListener {}
     }
 
     // Revisa si secciones ha sido visitadas para el logro "Explorador"
     private fun checkAllSectionsVisited() {
-        val chatbot = sharedPrefs.getBoolean(KEY_CHATBOT_USED, false)
-        val logros = sharedPrefs.getBoolean(KEY_LOGROS_VISITED, false)
-        val perfil = sharedPrefs.getBoolean(KEY_PERFIL_VISITED, false)
-        val aprende = sharedPrefs.getBoolean(KEY_APRENDE_VISITED, false)
-        if (chatbot && logros && perfil && aprende) {
-            unlockLogro("all_sections_opened")
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).get().addOnSuccessListener { doc ->
+            val chatbot = doc.getBoolean("chatbot_used") ?: false
+            val logros = doc.getBoolean("logros_visited") ?: false
+            val perfil = doc.getBoolean("perfil_visited") ?: false
+            val aprende = doc.getBoolean("aprende_visited") ?: false
+            if (chatbot && logros && perfil && aprende) {
+                if (!unlockedLogrosIds.contains("all_sections_opened")) {
+                    unlockLogro("all_sections_opened")
+                }
+            }
         }
     }
 
     // Logro Paciente: agrega el día actual (yyyy-MM-dd) y evalúa si se desbloquea
     fun onGamePlayedToday() {
+        val user = auth.currentUser ?: return
+        val uid = user.uid
         val today = java.text.SimpleDateFormat("yyyy-MM-dd").format(java.util.Date())
-        val daysPlayed: MutableSet<String> =
-            sharedPrefs.getStringSet(KEY_DAYS_PLAYED, mutableSetOf())?.toMutableSet()
-                ?: mutableSetOf()
-        daysPlayed.add(today)
-        sharedPrefs.edit().putStringSet(KEY_DAYS_PLAYED, daysPlayed).apply()
-        if (daysPlayed.size >= 7) {
-            unlockLogro("seven_days_played")
+        db.collection("users").document(uid).get().addOnSuccessListener { doc ->
+            val daysPlayed =
+                (doc.get("days_played") as? List<String>)?.toMutableSet() ?: mutableSetOf()
+            daysPlayed.add(today)
+            db.collection("users").document(uid).update("days_played", daysPlayed.toList())
+            if (daysPlayed.size >= 7) {
+                unlockLogro("seven_days_played")
+            }
         }
     }
 
@@ -269,23 +327,53 @@ class LogrosManager(context: Context) {
         if (noMistakes) {
             unlockLogro("perfect_level_completed")
         }
-        // Revisa primer intento (solo está aquí para que esté junto, la lógica real ya existe después del primer intento)
-        val completedLevels =
-            sharedPrefs.getStringSet(KEY_LEVELS_COMPLETED, mutableSetOf()) ?: mutableSetOf()
-        if (!completedLevels.contains(levelNumber.toString())) {
-            unlockLogro("first_attempt_level_completed")
-        }
+        // Ya no revisa primer intento con storage local, debe hacerse sólo usando la lista de completados en Firebase.
     }
 
     // Para "Persistente". Llamar cuando el usuario falla alguna pregunta pero igual termina el nivel
     fun onLevelCompletedWithMistake(levelNumber: Int) {
-        val levelsWithMistakes =
-            sharedPrefs.getStringSet(KEY_LEVELS_WITH_MISTAKES, mutableSetOf())?.toMutableSet()
-                ?: mutableSetOf()
-        levelsWithMistakes.add(levelNumber.toString())
-        sharedPrefs.edit().putStringSet(KEY_LEVELS_WITH_MISTAKES, levelsWithMistakes).apply()
-        if (levelsWithMistakes.size >= 3) {
-            unlockLogro("three_levels_wrong_answer")
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).get().addOnSuccessListener { doc ->
+            val levelsWithMistakes =
+                (doc.get("levels_with_mistakes") as? List<Int>)?.toMutableSet() ?: mutableSetOf()
+            levelsWithMistakes.add(levelNumber)
+            db.collection("users").document(uid)
+                .update("levels_with_mistakes", levelsWithMistakes.toList())
+            if (levelsWithMistakes.size >= 3) {
+                unlockLogro("three_levels_wrong_answer")
+            }
         }
+    }
+
+    private fun syncCorrectAnswersFromFirestore(onFinished: () -> Unit = {}) {
+        val user = auth.currentUser ?: return
+        val uid = user.uid
+        db.collection("users").document(uid).get().addOnSuccessListener { doc ->
+            val actual = (doc.getLong("correct_answers_count") ?: 0L).toInt()
+            correctAnswersCount = actual
+            onFinished()
+        }.addOnFailureListener { onFinished() }
+    }
+
+    private fun syncDaysPlayedFromFirestore(onFinished: () -> Unit = {}) {
+        onFinished()
+    }
+
+    private fun syncLevelsWithMistakesFromFirestore(onFinished: () -> Unit = {}) {
+        onFinished()
+    }
+
+    // Sincronizar flags de visita a secciones (dummy; sólo para el init)
+    private fun syncSectionFlagsFromFirestore(onFinished: () -> Unit = {}) {
+        onFinished()
+    }
+
+    // Para "Perfección" y "Primer intento"
+    fun onLevelFinished(noMistakes: Boolean, levelNumber: Int, nivelesCompletados: List<Int>) {
+        if (noMistakes) {
+            unlockLogro("perfect_level_completed")
+        }
+        // Ya no se verifica "Primer intento" porque ese logro ha sido eliminado.
     }
 }

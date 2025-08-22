@@ -25,7 +25,6 @@ fun AprendeScreen() {
         mutableStateOf(loadLevelsFromRaw(context))
     }
     var selectedLevel by remember { mutableStateOf<Level?>(null) }
-    var highestUnlockedLevel by remember { mutableStateOf(1) } // Nivel 1 desbloqueado inicialmente
     var nivelesCompletados by remember { mutableStateOf<List<Int>>(emptyList()) }
     var cargandoProgreso by remember { mutableStateOf(true) }
 
@@ -35,16 +34,13 @@ fun AprendeScreen() {
         logrosManager.onGamePlayedToday()
     }
 
-    // Recupera el progreso al entrar a AprendeScreen
+    // Recupera el progreso al entrar a AprendeScreen SOLO desde Firebase
     LaunchedEffect(Unit) {
         cargandoProgreso = true
         com.icescream.infera.data.AuthRepository.obtenerProgresoNiveles(
             onSuccess = { completadosRaw ->
                 val completados = completadosRaw.map { (it as Number).toInt() }
                 nivelesCompletados = completados
-                // El nivel más alto desbloqueado será el último completado + 1, mínimo 1
-                highestUnlockedLevel =
-                    if (completados.isNotEmpty()) completados.maxOrNull()!! + 1 else 1
                 cargandoProgreso = false
             },
             onError = {
@@ -59,6 +55,9 @@ fun AprendeScreen() {
         return
     }
 
+    val highestUnlockedLevel =
+        if (nivelesCompletados.isNotEmpty()) nivelesCompletados.maxOrNull()!! + 1 else 1
+
     if (selectedLevel == null) {
         LevelsMapScreen(
             levels = levels,
@@ -69,26 +68,27 @@ fun AprendeScreen() {
         QuizScreen(
             level = selectedLevel!!,
             onBackClick = { selectedLevel = null },
-            // Manejamos la finalización del nivel
             onLevelCompleted = { completedLevel ->
-                // Actualizamos el progreso de la autenticación
+                // Guardar el nivel completado (en Firestore)
                 com.icescream.infera.data.AuthRepository.guardarNivelCompletado(
                     nivel = completedLevel.number,
                     onSuccess = {
-                        // Actualizamos localmente la lista de completados y el nivel desbloqueado
-                        val nuevosCompletados =
-                            (nivelesCompletados + completedLevel.number).map { it.toInt() }
-                        nivelesCompletados = nuevosCompletados
-                        highestUnlockedLevel =
-                            (nuevosCompletados.maxOrNull() ?: completedLevel.number) + 1
-                        selectedLevel = null
+                        // Refrescar la lista de completados desde la base de datos remota
+                        com.icescream.infera.data.AuthRepository.obtenerProgresoNiveles(
+                            onSuccess = { completadosRaw ->
+                                val nuevosCompletados =
+                                    completadosRaw.map { (it as Number).toInt() }
+                                nivelesCompletados = nuevosCompletados
+                                // Aquí sí podemos actualizar logros según la lista completa
+                                logrosManager.checkAndUnlockLogrosWithNivelesList(nuevosCompletados)
+                                selectedLevel = null // salir al mapa
+                            },
+                            onError = { selectedLevel = null }
+                        )
                     },
-                    onError = { selectedLevel = null } // Manejo simple: regresa en caso de error
+                    onError = { selectedLevel = null }
                 )
-                // Llamamos a la función del gestor de logros para registrar que se completó un nivel
-                logrosManager.onLevelCompleted(completedLevel.number)
             },
-            // Le pasamos el gestor de logros para que se puedan actualizar las respuestas correctas
             logrosManager = logrosManager
         )
     }

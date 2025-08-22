@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -25,6 +24,8 @@ import com.icescream.infera.R
 import com.icescream.infera.viewmodel.ProfileViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalContext
+import com.icescream.infera.data.LogrosManager
 
 /**
  * Pantalla de perfil del usuario. Aquí puede ver/editar su información.
@@ -53,10 +54,8 @@ fun PerfilScreen(
     }
 
     val context = LocalContext.current
-    val logrosManager = remember { com.icescream.infera.data.LogrosManager(context) }
-    LaunchedEffect(Unit) {
-        logrosManager.onPerfilVisited()
-    }
+    val logrosManager = remember { LogrosManager(context) }
+    LaunchedEffect(Unit) { logrosManager.onPerfilVisited() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.isLoading) {
