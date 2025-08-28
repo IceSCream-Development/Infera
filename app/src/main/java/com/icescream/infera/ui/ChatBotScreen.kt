@@ -18,6 +18,17 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.icescream.infera.R
+import com.icescream.infera.CoinManager
+
 
 // Modelo de mensaje
 data class ChatMessage(val text: String, val isUser: Boolean)
@@ -60,87 +71,242 @@ fun ChatBotScreen() {
         saveHistory(messages)
     }
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    val coinManager = remember { CoinManager.getInstance(context) }
+    var canSend by remember { mutableStateOf(true) }
+    var showCoinWarning by remember { mutableStateOf(false) }
+    val coinPrice = 1
+    var coinBalance by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        coinManager.getCoinsFromFirestore { saldo ->
+            coinBalance = saldo
+            canSend = saldo >= coinPrice
+        }
+    }
+    LaunchedEffect(coinBalance) {
+        if (coinBalance < coinPrice) {
+            canSend = false
+            showCoinWarning = true
+        } else {
+            canSend = true
+            showCoinWarning = false
+        }
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFFFAF2F8))
+    ) {
+        // Barra superior Swiny
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 38.dp, bottom = 8.dp, start = 20.dp, end = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Swiny",
+                color = Color(0xFF4A90E2),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Box(
+                Modifier
+                    .background(Color(0xFFFFE683), shape = RoundedCornerShape(11.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    "BOT",
+                    color = Color(0xFFCAA500),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    letterSpacing = 1.5.sp
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            // Contador de monedas
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(id = R.drawable.oinkies),
+                    contentDescription = "Oinkies",
+                    tint = Color.Unspecified,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .padding(end = 2.dp)
+                )
+                Text(
+                    text = coinBalance.toString(),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFB7760C),
+                )
+            }
+        }
+        Divider(color = Color(0xFFEFE6D4), thickness = 1.dp)
+        // Mensajes chat
         Column(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 0.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.Bottom
         ) {
-            Text("Gemini Playground", style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(16.dp))
             LazyColumn(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .weight(1f),
                 reverseLayout = true,
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 items(messages.asReversed()) { message ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
-                    ) {
-                        if (!message.isUser) BotAvatar()
-                        Card(
-                            modifier = Modifier.padding(4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (message.isUser)
-                                    MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                            )
+                    if (!message.isUser) {
+                        // Mensaje Swiny
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Bottom
                         ) {
-                            Text(
-                                message.text,
-                                color = if (message.isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(12.dp),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                            // Avatar/ícono Swiny
+                            Box(
+                                Modifier
+                                    .padding(bottom = 3.dp)
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFE6F3)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.swiny_chatbot),
+                                    contentDescription = null,
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            // Burbuja lila
+                            Box(
+                                Modifier
+                                    .widthIn(max = 280.dp)
+                                    .padding(start = 8.dp, end = 18.dp)
+                                    .background(
+                                        Color(0xFFF2ECFF),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Text(
+                                    message.text,
+                                    color = Color(0xFF29235C),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            }
                         }
-                        if (message.isUser) UserAvatar()
+                        Spacer(modifier = Modifier.height(12.dp))
+                    } else {
+                        // Mensaje usuario
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Box(
+                                Modifier
+                                    .widthIn(max = 240.dp)
+                                    .background(
+                                        Color(0xFFDDFCD2),
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
+                                    .padding(horizontal = 15.dp, vertical = 10.dp)
+                            ) {
+                                Text(
+                                    message.text,
+                                    color = Color(0xFF173A04),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(11.dp))
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
+        }
+        // Input campo
+        if (showCoinWarning) {
+            Text(
+                text = "Uy! Parece que no cuentas con los Oinkies suficientes",
+                color = Color(0xFFE53935),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
+        }
+        Row(
+            Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .background(Color(0xFFF2ECFF), shape = RoundedCornerShape(22.dp)),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             OutlinedTextField(
                 value = prompt,
                 onValueChange = { prompt = it },
-                label = { Text("Escribe tu pregunta...") },
-                modifier = Modifier.fillMaxWidth(0.95f),
-                enabled = !isLoading,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(18.dp),
+                placeholder = { Text("Escribe un mensaje") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    disabledBorderColor = Color.Transparent
+                ),
+                textStyle = MaterialTheme.typography.bodyMedium,
+                enabled = canSend
             )
-            Spacer(Modifier.height(8.dp))
-            Button(
+            IconButton(
                 onClick = {
-                    val userPrompt = prompt.trim()
-                    if (userPrompt.isEmpty()) return@Button
-                    isLoading = true
-                    addMessageAndPersist(ChatMessage(userPrompt, true))
-                    prompt = ""
-                    scope.launch {
-                        try {
-                            val reply = ChatRepository.sendMessage(userPrompt)
-                            addMessageAndPersist(ChatMessage(reply, false))
-                        } catch (e: Exception) {
-                            addMessageAndPersist(
-                                ChatMessage(
-                                    "Error de conexión o respuesta del servidor",
-                                    false
-                                )
-                            )
+                    if (!canSend) return@IconButton
+                    if (prompt.isNotBlank()) {
+                        val userPrompt = prompt.trim()
+                        if (userPrompt.isEmpty()) return@IconButton
+                        // Descontar oinkie antes de enviar
+                        if (coinManager.cobrarPorBot(coinPrice)) {
+                            coinBalance -= coinPrice
+                            isLoading = true
+                            addMessageAndPersist(ChatMessage(userPrompt, true))
+                            prompt = ""
+                            scope.launch {
+                                try {
+                                    val reply = ChatRepository.sendMessage(userPrompt)
+                                    addMessageAndPersist(ChatMessage(reply, false))
+                                } catch (e: Exception) {
+                                    addMessageAndPersist(
+                                        ChatMessage(
+                                            "Error de conexión o respuesta del servidor",
+                                            false
+                                        )
+                                    )
+                                }
+                                isLoading = false
+                            }
                         }
-                        isLoading = false
                     }
                 },
-                enabled = !isLoading && prompt.isNotBlank(),
+                enabled = canSend,
+                modifier = Modifier
+                    .padding(start = 3.dp)
+                    .size(38.dp)
+                    .background(Color(0xFFF2ECFF), shape = RoundedCornerShape(19.dp))
             ) {
-                Text("Enviar")
-            }
-            if (isLoading) {
-                Spacer(Modifier.height(8.dp))
-                CircularProgressIndicator()
+                Icon(
+                    painter = painterResource(id = R.drawable.send),
+                    contentDescription = "Enviar mensaje",
+                    tint = Color(0xFF4A90E2),
+                    modifier = Modifier.size(27.dp)
+                )
             }
         }
+        Spacer(Modifier.height(14.dp))
     }
 }
 

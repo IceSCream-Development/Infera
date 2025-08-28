@@ -58,11 +58,16 @@ fun AprendeScreen() {
     val highestUnlockedLevel =
         if (nivelesCompletados.isNotEmpty()) nivelesCompletados.maxOrNull()!! + 1 else 1
 
+    val nivelActual =
+        levels.find { it.number == highestUnlockedLevel } ?: levels.lastOrNull() ?: levels[0]
+
     if (selectedLevel == null) {
         LevelsMapScreen(
             levels = levels,
             onLevelClick = { level -> selectedLevel = level },
-            isUnlocked = { level -> level.number <= highestUnlockedLevel }
+            isUnlocked = { level -> level.number <= highestUnlockedLevel },
+            nivelActualNumber = nivelActual.number,
+            nivelActualTitulo = nivelActual.name
         )
     } else {
         QuizScreen(

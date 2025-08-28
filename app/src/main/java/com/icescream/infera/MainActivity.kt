@@ -118,6 +118,10 @@ class MainActivity : ComponentActivity() {
                             onGoToLogin = {
                                 pantallaActual = "login"
                                 registerErrorMsg = null
+                            },
+                            onGoogleRegisterSuccess = {
+                                pantallaActual = "welcomeUser"
+                                // currentUsername se podría actualizar usando datos de Firebase si lo deseas
                             }
                         )
                     }
@@ -141,7 +145,41 @@ class MainActivity : ComponentActivity() {
                                     0 -> AprendeScreen()
                                     1 -> ChatBotScreen()
                                     2 -> LogrosScreen()
-                                    3 -> PerfilScreen()
+                                    3 -> PerfilScreen(
+                                        onLogout = {
+                                            // Cerrar sesión en Firebase
+                                            FirebaseAuth.getInstance().signOut()
+                                            pantallaActual = "welcome"
+                                            homeTabIndex = 0
+                                        },
+                                        onDeleteAccount = {
+                                            // Eliminar cuenta de usuario y perfil en Firestore
+                                            val user = FirebaseAuth.getInstance().currentUser
+                                            val uid = user?.uid
+                                            if (user != null && uid != null) {
+                                                val db =
+                                                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                                // 1. Borrar perfil Usuario
+                                                db.collection("users").document(uid).delete()
+                                                    .addOnSuccessListener {
+                                                        // 2. Buscar username y borrar
+                                                        db.collection("usernames")
+                                                            .whereEqualTo("uid", uid).get()
+                                                            .addOnSuccessListener { query ->
+                                                                for (doc in query) {
+                                                                    doc.reference.delete()
+                                                                }
+                                                                // 3. Borrar usuario Auth
+                                                                user.delete()
+                                                                    .addOnCompleteListener {
+                                                                        pantallaActual = "welcome"
+                                                                        homeTabIndex = 0
+                                                                    }
+                                                            }
+                                                    }
+                                            }
+                                        }
+                                    )
                                 }
                             }
                         )

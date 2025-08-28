@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.gson.Gson
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.auth.FirebaseAuth
+import com.icescream.infera.CoinManager
 
 /**
  * Clase que gestiona la lógica de los logros.
@@ -83,6 +84,21 @@ class LogrosManager(private val context: Context) {
             id = "all_sections_opened",
             title = "Explorador",
             description = "Abre todas las secciones de la app."
+        ),
+        Logro(
+            id = "streak_3",
+            title = "Streak Novato",
+            description = "Alcanza una racha de 3 días seguidos."
+        ),
+        Logro(
+            id = "streak_7",
+            title = "Streak de Bronce",
+            description = "Alcanza una racha de 7 días seguidos."
+        ),
+        Logro(
+            id = "streak_30",
+            title = "Streak de Oro",
+            description = "Alcanza una racha de 30 días seguidos."
         )
     )
 
@@ -184,27 +200,17 @@ class LogrosManager(private val context: Context) {
      * Verifica si se cumplen las condiciones para desbloquear un logro con niveles.
      */
     fun checkAndUnlockLogrosWithNivelesList(nivelesCompletados: List<Int>) {
-        val unlockedLogros = unlockedLogrosIds.toMutableSet()
-        // Regla: Nivel 1 completado
-        if (nivelesCompletados.contains(1) && !unlockedLogros.contains("first_level_completed")) {
-            unlockedLogros.add("first_level_completed")
+        if (nivelesCompletados.contains(1) && !unlockedLogrosIds.contains("first_level_completed")) {
+            unlockLogro("first_level_completed")
         }
-        // Regla: 3 niveles completados
-        if (nivelesCompletados.size >= 3 && !unlockedLogros.contains("three_levels_completed")) {
-            unlockedLogros.add("three_levels_completed")
+        if (nivelesCompletados.size >= 3 && !unlockedLogrosIds.contains("three_levels_completed")) {
+            unlockLogro("three_levels_completed")
         }
-        // Regla: 5 niveles completados
-        if (nivelesCompletados.size >= 5 && !unlockedLogros.contains("five_levels_completed")) {
-            unlockedLogros.add("five_levels_completed")
+        if (nivelesCompletados.size >= 5 && !unlockedLogrosIds.contains("five_levels_completed")) {
+            unlockLogro("five_levels_completed")
         }
-        // Regla: 10 niveles completados
-        if (nivelesCompletados.size >= 10 && !unlockedLogros.contains("ten_levels_completed")) {
-            unlockedLogros.add("ten_levels_completed")
-        }
-        // Después, actualizar si hay cambios
-        if (unlockedLogros.size > unlockedLogrosIds.size) {
-            unlockedLogrosIds = unlockedLogros
-            saveLogrosToFirestore()
+        if (nivelesCompletados.size >= 10 && !unlockedLogrosIds.contains("ten_levels_completed")) {
+            unlockLogro("ten_levels_completed")
         }
     }
 
@@ -212,28 +218,17 @@ class LogrosManager(private val context: Context) {
      * Verifica si se cumplen las condiciones para desbloquear un logro.
      */
     private fun checkAndUnlockLogros() {
-        val unlockedLogros = unlockedLogrosIds.toMutableSet()
-
-        // Regla: 5 preguntas correctas
-        if (correctAnswersCount >= 5 && !unlockedLogros.contains("five_questions_correct")) {
-            unlockedLogros.add("five_questions_correct")
+        if (correctAnswersCount >= 5 && !unlockedLogrosIds.contains("five_questions_correct")) {
+            unlockLogro("five_questions_correct")
         }
-
-        // Regla: 20 preguntas correctas
-        if (correctAnswersCount >= 20 && !unlockedLogros.contains("twenty_questions_correct")) {
-            unlockedLogros.add("twenty_questions_correct")
+        if (correctAnswersCount >= 20 && !unlockedLogrosIds.contains("twenty_questions_correct")) {
+            unlockLogro("twenty_questions_correct")
         }
-        // 10 y 50 preguntas correctas
-        if (correctAnswersCount >= 10 && !unlockedLogros.contains("ten_questions_correct")) {
-            unlockedLogros.add("ten_questions_correct")
+        if (correctAnswersCount >= 10 && !unlockedLogrosIds.contains("ten_questions_correct")) {
+            unlockLogro("ten_questions_correct")
         }
-        if (correctAnswersCount >= 50 && !unlockedLogros.contains("fifty_questions_correct")) {
-            unlockedLogros.add("fifty_questions_correct")
-        }
-        // Eventos especiales y preguntas siguen funcionando igual
-        if (unlockedLogros.size > unlockedLogrosIds.size) {
-            unlockedLogrosIds = unlockedLogros
-            saveLogrosToFirestore()
+        if (correctAnswersCount >= 50 && !unlockedLogrosIds.contains("fifty_questions_correct")) {
+            unlockLogro("fifty_questions_correct")
         }
     }
 
@@ -244,6 +239,7 @@ class LogrosManager(private val context: Context) {
             unlockedLogros.add(logroId)
             unlockedLogrosIds = unlockedLogros
             saveLogrosToFirestore()
+            CoinManager.getInstance(context).otorgarMonedasPorPregunta(1, 5)
         }
     }
 
@@ -375,5 +371,48 @@ class LogrosManager(private val context: Context) {
             unlockLogro("perfect_level_completed")
         }
         // Ya no se verifica "Primer intento" porque ese logro ha sido eliminado.
+    }
+
+    // Calcula y retorna el streak (racha) actual de días jugados consecutivos
+    fun getCurrentStreak(onResult: (Int) -> Unit) {
+        val user = auth.currentUser ?: return onResult(0)
+        val uid = user.uid
+        db.collection("users").document(uid).get().addOnSuccessListener { doc ->
+            val daysPlayed =
+                (doc.get("days_played") as? List<String>)?.toSet()?.toList() ?: emptyList()
+            if (daysPlayed.isEmpty()) {
+                onResult(0)
+                return@addOnSuccessListener
+            }
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd")
+            val parsedDates = daysPlayed.mapNotNull {
+                try {
+                    sdf.parse(it)
+                } catch (_: Exception) {
+                    null
+                }
+            }.sortedDescending()
+            if (parsedDates.isEmpty()) {
+                onResult(0)
+                return@addOnSuccessListener
+            }
+            var streak = 0
+            var cal = java.util.Calendar.getInstance()
+            cal.time = java.util.Date()
+            // Recorre desde hoy hacia atrás
+            for (date in parsedDates) {
+                val diff = ((cal.timeInMillis - date.time) / (1000 * 60 * 60 * 24)).toInt()
+                if (diff == 0 || (streak > 0 && diff == streak)) {
+                    streak++
+                } else if (diff > streak) {
+                    break
+                }
+            }
+            // Desbloquear logros de racha
+            if (streak >= 3) unlockLogro("streak_3")
+            if (streak >= 7) unlockLogro("streak_7")
+            if (streak >= 30) unlockLogro("streak_30")
+            onResult(streak)
+        }.addOnFailureListener { onResult(0) }
     }
 }

@@ -1,5 +1,6 @@
 package com.icescream.infera.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +11,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,7 +34,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.unit.sp
 import com.icescream.infera.data.LogrosManager // Importación del gestor de logros
+import com.icescream.infera.CoinManager
 
 /**
  * Pantalla que muestra las preguntas de un nivel con feedback visual y avance automático.
@@ -45,30 +49,21 @@ import com.icescream.infera.data.LogrosManager // Importación del gestor de log
 @Composable
 fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Unit, onLevelCompleted: (Level) -> Unit = {}) {
     // Colores de feedback
-    val correctGreen = Color(0xFF4CAF50)        // Verde
-    val correctDarkGreen =
-        Color(0xFF2E7D32)    // Verde oscuro para mostrar la correcta cuando el usuario falla
-    val wrongRed = Color(0xFFE53935)            // Rojo para respuesta seleccionada incorrecta
-
-    // ViewModel de vidas
+    val correctGreen = Color(0xFF4CAF50)
+    val correctDarkGreen = Color(0xFF2E7D32)
+    val wrongRed = Color(0xFFE53935)
     val vidasVm: VidasViewModel = viewModel()
     val vidas by vidasVm.vidas.collectAsState()
     val tiempoRestanteMs by vidasVm.tiempoRestante.collectAsState()
-
     var currentQuestionIndex by remember { mutableStateOf(0) }
     var selectedAnswerIndex by remember { mutableStateOf<Int?>(null) }
     var isShowingFeedback by remember { mutableStateOf(false) }
     var isLevelFinished by remember { mutableStateOf(false) }
     var correctCount by remember { mutableStateOf(0) }
-    var hasReportedCompletion by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var feedbackMsg by remember { mutableStateOf<String?>(null) }
     var lastAnswerIsCorrect by remember { mutableStateOf<Boolean?>(null) }
-
-    // Estado interno para mostrar el diálogo de sin vidas
     var mostrarDialogoSinVidas by remember { mutableStateOf(false) }
-
     val questions = level.questions
     val hasQuestions = questions.isNotEmpty()
 
@@ -87,75 +82,58 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
     }
 
     if (isLevelFinished) {
-        // Notificar sólo una vez que el nivel fue completado
-        LaunchedEffect(Unit) {
-            if (!hasReportedCompletion) {
-                hasReportedCompletion = true
+        CompleteLevelScreen(
+            onContinue = {
                 onLevelCompleted(level)
-            }
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "¡Nivel completado!",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    text = "Tu puntuación: $correctCount/${questions.size}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                Button(onClick = onBackClick, modifier = Modifier.fillMaxWidth()) {
-                    Text("Volver al mapa de niveles")
+                val perfect = correctCount == questions.size
+                if (perfect) {
+                    CoinManager.getInstance(context).otorgarMonedasPorPregunta(1, 5)
+                } else {
+                    CoinManager.getInstance(context).otorgarMonedasPorPregunta(1, 3)
                 }
+                onBackClick()
             }
-        }
+        )
         return
     }
 
-    val currentQuestion = questions[currentQuestionIndex]
-    // Respuestas barajadas y estables por cada índice de pregunta
-    val shuffledAnswers = remember(currentQuestionIndex) { currentQuestion.answers.shuffled() }
-    val correctIndex = remember(currentQuestionIndex) {
-        shuffledAnswers.indexOfFirst { it.isCorrect }
-    }
-
-    fun goToNextOrFinish() {
-        if (currentQuestionIndex < questions.lastIndex) {
-            currentQuestionIndex += 1
-            selectedAnswerIndex = null
-            isShowingFeedback = false
-        } else {
-            isLevelFinished = true
-        }
-    }
-
-    val yellowBtn = Color(0xFFFFD600)
-    val feedbackGreen = Color(0xFF43BE57)
-    val feedbackRed = Color(0xFFE34053)
-    val correctBg = Color(0xFFD1FFCC)
-    val incorrectBg = Color(0xFFFFD4DA)
-    val borderDefault = Color(0xFFBEBEBE)
-    val greyBtn = Color(0xFFDFDFDF)
-
-    // En cada render, si vidas == 0, muestra el diálogo
-    if (vidas <= 0 && !mostrarDialogoSinVidas) {
-        mostrarDialogoSinVidas = true
-    }
-
+    // ... AQUÍ el contenido principal del quiz (Column con preguntas, feedback, etc.) ...
     Column(
         modifier = Modifier
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        val currentQuestion = questions[currentQuestionIndex]
+        // Respuestas barajadas y estables por cada índice de pregunta
+        val shuffledAnswers =
+            remember(currentQuestionIndex) { currentQuestion.answers.shuffled() }
+        val correctIndex = remember(currentQuestionIndex) {
+            shuffledAnswers.indexOfFirst { it.isCorrect }
+        }
+
+        fun goToNextOrFinish() {
+            if (currentQuestionIndex < questions.lastIndex) {
+                currentQuestionIndex += 1
+                selectedAnswerIndex = null
+                isShowingFeedback = false
+            } else {
+                isLevelFinished = true
+            }
+        }
+
+        val yellowBtn = Color(0xFFFFD600)
+        val feedbackGreen = Color(0xFF43BE57)
+        val feedbackRed = Color(0xFFE34053)
+        val correctBg = Color(0xFFD1FFCC)
+        val incorrectBg = Color(0xFFFFD4DA)
+        val borderDefault = Color(0xFFBEBEBE)
+        val greyBtn = Color(0xFFDFDFDF)
+
+        // En cada render, si vidas == 0, muestra el diálogo
+        if (vidas <= 0 && !mostrarDialogoSinVidas) {
+            mostrarDialogoSinVidas = true
+        }
+
         // Imagen de fondo (quiz_background)
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
@@ -167,7 +145,10 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
             // Número de pregunta fijo centrado (aprox. igual altura actual)
             Text(
                 text = "${(currentQuestionIndex + 1)} de ${questions.size}",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
                 color = Color.White,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -222,7 +203,10 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                                 Text(
                                     text = "$vidas",
                                     color = Color(0xFF23235D),
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
                                     modifier = Modifier.padding(start = 3.dp)
                                 )
                                 if (vidas < LivesManager.getMaxLives()) {
@@ -247,13 +231,19 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp)
-                                .background(Color(0xFFE1CFFE), shape = MaterialTheme.shapes.medium)
+                                .background(
+                                    Color(0xFFE1CFFE),
+                                    shape = MaterialTheme.shapes.medium
+                                )
                         )
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth((currentQuestionIndex + 1) / questions.size.toFloat())
                                 .height(8.dp)
-                                .background(Color(0xFF6B50DE), shape = MaterialTheme.shapes.medium)
+                                .background(
+                                    Color(0xFF6B50DE),
+                                    shape = MaterialTheme.shapes.medium
+                                )
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -275,7 +265,7 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = currentQuestion.text,
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 19.sp),
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF23235D),
                             modifier = Modifier.align(Alignment.Start)
@@ -287,7 +277,8 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                             val showFeedback = selectedAnswerIndex != null && isShowingFeedback
                             val isCorrectAns = answer.isCorrect
                             val isCorrectSelection = isSelected && isCorrectAns && showFeedback
-                            val isIncorrectSelection = isSelected && !isCorrectAns && showFeedback
+                            val isIncorrectSelection =
+                                isSelected && !isCorrectAns && showFeedback
                             val shouldHighlightCorrect =
                                 showFeedback && isCorrectAns && selectedAnswerIndex != null && !isSelected && !shuffledAnswers[selectedAnswerIndex!!].isCorrect
                             val borderColor = when {
@@ -300,38 +291,38 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                                 isIncorrectSelection -> incorrectBg
                                 else -> Color.White
                             }
-                            Button(
+                            OutlinedButton(
                                 onClick = {
-                                    selectedAnswerIndex = index
-                                    isShowingFeedback = false
-                                    if (isCorrectAns) {
-                                        feedbackMsg = "¡Buen Trabajo! "
-                                        lastAnswerIsCorrect = true
-                                        // Cuando la respuesta es correcta, llamamos al gestor de logros
-                                        logrosManager.onQuestionAnsweredCorrectly()
-                                    } else {
-                                        feedbackMsg = "¡Ups! Respuesta Incorrecta  -1"
-                                        lastAnswerIsCorrect = false
-                                        vidasVm.perderVida() // <-- Disminuye vidas con el vm
+                                    if (!isShowingFeedback && vidas > 0) {
+                                        selectedAnswerIndex = index
+                                        isShowingFeedback = false
+                                        if (isCorrectAns) {
+                                            feedbackMsg = "¡Buen Trabajo! "
+                                            lastAnswerIsCorrect = true
+                                            logrosManager.onQuestionAnsweredCorrectly()
+                                        } else {
+                                            feedbackMsg = "¡Ups! Respuesta Incorrecta  -1"
+                                            lastAnswerIsCorrect = false
+                                            vidasVm.perderVida()
+                                        }
+                                        isShowingFeedback = true
                                     }
-                                    isShowingFeedback = true
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 6.dp)
-                                    .border(2.dp, borderColor, shape = MaterialTheme.shapes.medium)
-                                    .background(bgColor, shape = MaterialTheme.shapes.medium),
+                                    .padding(vertical = 6.dp),
                                 shape = MaterialTheme.shapes.medium,
-                                colors = ButtonDefaults.buttonColors(
+                                border = BorderStroke(2.dp, borderColor),
+                                colors = ButtonDefaults.outlinedButtonColors(
                                     containerColor = bgColor,
-                                    contentColor = Color(0xFF23235D)
+                                    contentColor = Color(0xFF23235D),
+                                    disabledContentColor = Color(0xFFBEBEBE)
                                 ),
-                                enabled = !isShowingFeedback && vidas > 0,
-                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                                enabled = true
                             ) {
                                 Text(
                                     text = answer.text,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
                                     color = Color(0xFF23235D),
                                     textAlign = TextAlign.Start,
                                     modifier = Modifier.fillMaxWidth()
@@ -343,7 +334,7 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                             Text(
                                 text = feedbackMsg ?: "",
                                 color = if (lastAnswerIsCorrect == true) feedbackGreen else feedbackRed,
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp),
                                 modifier = Modifier.padding(top = 12.dp)
                             )
                         }
@@ -351,11 +342,11 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                     Spacer(modifier = Modifier.height(38.dp))
                 }
                 // Botón continuar fijo abajo
-                val continuarEnabled = isShowingFeedback && selectedAnswerIndex != null && vidas > 0
+                val continuarEnabled =
+                    isShowingFeedback && selectedAnswerIndex != null && vidas > 0
                 Button(
                     onClick = {
-                        scope.launch {
-                            delay(300)
+                        if (continuarEnabled) {
                             goToNextOrFinish()
                             selectedAnswerIndex = null
                             isShowingFeedback = false
@@ -381,7 +372,7 @@ fun QuizScreen(level: Level, logrosManager: LogrosManager, onBackClick: () -> Un
                 ) {
                     Text(
                         text = "Continuar",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
                         color = if (continuarEnabled) Color(0xFF23235D) else Color(0xFF949494)
                     )
                 }

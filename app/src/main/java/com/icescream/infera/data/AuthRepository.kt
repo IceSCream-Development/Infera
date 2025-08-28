@@ -241,7 +241,7 @@ object AuthRepository {
                 }
                 val uid = user.uid
                 val email = user.email ?: ""
-                val username = user.displayName ?: email.substringBefore("@")
+                val baseUsername = user.displayName ?: email.substringBefore("@")
 
                 // Buscar si ya tiene perfil en 'users'
                 db.collection("users").document(uid).get()
@@ -250,30 +250,57 @@ object AuthRepository {
                             // Ya tiene perfil
                             onSuccess(doc.data!!)
                         } else {
-                            // Crear nuevo perfil
-                            val perfil = hashMapOf(
-                                "username" to username,
-                                "email" to email
-                            )
-                            db.collection("users").document(uid).set(perfil)
-                                .addOnSuccessListener {
-                                    // Guardar nombre de usuario en usernames sólo si no existe
-                                    db.collection("usernames").document(username).get()
-                                        .addOnSuccessListener { doc2 ->
-                                            if (!doc2.exists()) {
-                                                db.collection("usernames").document(username)
-                                                    .set(mapOf("uid" to uid))
-                                                    .addOnSuccessListener { onSuccess(perfil) }
-                                                    .addOnFailureListener { onSuccess(perfil) } // No bloquear login si falla
-                                            } else {
-                                                onSuccess(perfil)
+                            // Busca un username único estilo nombre#1234
+                            val usernamesCol = db.collection("usernames")
+                            val searchBase = baseUsername.replace("#", "")
+                            fun crearPerfilConUsernameFinal(usernameFinal: String) {
+                                val perfil = hashMapOf(
+                                    "username" to usernameFinal,
+                                    "email" to email
+                                )
+                                db.collection("users").document(uid).set(perfil)
+                                    .addOnSuccessListener {
+                                        usernamesCol.document(usernameFinal)
+                                            .set(mapOf("uid" to uid))
+                                            .addOnSuccessListener { onSuccess(perfil) }
+                                            .addOnFailureListener { onSuccess(perfil) } // No bloquear login si falla
+                                    }
+                                    .addOnFailureListener { e ->
+                                        onError("No se pudo crear perfil: " + e.message)
+                                    }
+                            }
+                            // 1. Verifica si el username base está libre
+                            usernamesCol.document(searchBase).get().addOnSuccessListener { d0 ->
+                                if (!d0.exists()) {
+                                    crearPerfilConUsernameFinal(searchBase)
+                                } else {
+                                    // 2. Si no, buscar uno tipo nombre#0001, nombre#0002, ...
+                                    // Obtén todos los usernames que sean del patrón
+                                    usernamesCol.whereGreaterThanOrEqualTo("uid", "").get()
+                                        .addOnSuccessListener { resultSet ->
+                                            val takenTags = mutableSetOf<Int>()
+                                            for (doc in resultSet) {
+                                                val id = doc.id
+                                                // Busca si el id es del estilo nombre#n
+                                                if (id.startsWith("$searchBase#")) {
+                                                    val tag = id.removePrefix("$searchBase#")
+                                                        .toIntOrNull()
+                                                    if (tag != null) takenTags.add(tag)
                                             }
                                         }
-                                        .addOnFailureListener { onSuccess(perfil) }
+                                        // Busca el primer tag libre entre 1 y 9999
+                                        val tag = (1..9999).first { !takenTags.contains(it) }
+                                        val usernameFinal = "$searchBase#$tag"
+                                        crearPerfilConUsernameFinal(usernameFinal)
+                                    }.addOnFailureListener {
+                                        // En caso de fallo con la consulta, usar uno aleatorio
+                                        val usernameFinal = "$searchBase#${(1000..9999).random()}"
+                                        crearPerfilConUsernameFinal(usernameFinal)
+                                    }
                                 }
-                                .addOnFailureListener { e ->
-                                    onError("No se pudo crear perfil: ${e.message}")
-                                }
+                            }.addOnFailureListener { e ->
+                                onError("No se pudo validar nombre de usuario: " + e.message)
+                            }
                         }
                     }
                     .addOnFailureListener { e ->

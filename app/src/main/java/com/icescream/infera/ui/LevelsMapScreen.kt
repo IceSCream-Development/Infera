@@ -1,6 +1,7 @@
 package com.icescream.infera.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,12 +19,29 @@ import com.icescream.infera.Level
 import com.icescream.infera.R
 import kotlin.math.ceil
 import kotlin.math.min
+import com.icescream.infera.CoinManager
+import com.icescream.infera.viewmodel.VidasViewModel
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 
 @Composable
 fun LevelsMapScreen(
     levels: List<Level>,
     onLevelClick: (Level) -> Unit,
-    isUnlocked: (Level) -> Boolean
+    isUnlocked: (Level) -> Boolean,
+    nivelActualNumber: Int = 1,
+    nivelActualTitulo: String = ""
 ) {
     // Posiciones relativas dentro de cada fondo
     val levelPositions = listOf(
@@ -58,6 +76,37 @@ fun LevelsMapScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
+        AppBackground()
+        val context = LocalContext.current
+        val coinManager = remember { CoinManager.getInstance(context) }
+        val vidasVm: VidasViewModel = viewModel()
+        val vidas by vidasVm.vidas.collectAsState()
+        var coins by remember { mutableStateOf(0) }
+        var streak by remember { mutableStateOf(0) }
+        var nivel by remember { mutableStateOf(1) }
+        var nivelTitulo by remember { mutableStateOf("") }
+        val currentLevel = levels.firstOrNull()
+        // Fetch monedas y streak de Firestore/asíncrono
+        LaunchedEffect(Unit) {
+            coinManager.getCoinsFromFirestore { saldo -> coins = saldo }
+        }
+        LaunchedEffect(Unit) {
+            com.icescream.infera.data.LogrosManager(context)
+                .getCurrentStreak { streakValue -> streak = streakValue }
+        }
+        // Puedes obtener el nivel y nombre real según tu lógica actual
+        currentLevel?.let {
+            nivel = it.number
+            nivelTitulo = it.name
+        }
+        InfoBarLevels(
+            vidas = vidas,
+            monedas = coins,
+            streak = streak,
+            nivel = nivelActualNumber,
+            nivelTitulo = nivelActualTitulo,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
         Column(
             Modifier
                 .fillMaxSize()
@@ -124,5 +173,108 @@ fun LevelsMapScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun InfoBarLevels(
+    vidas: Int,
+    monedas: Int,
+    streak: Int,
+    nivel: Int,
+    nivelTitulo: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .background(Color(0xFF5C8E46))
+            .padding(top = 10.dp, bottom = 0.dp)
+            .zIndex(2f),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            InfoItem(
+                icon = R.drawable.lives,
+                contentDesc = "Vidas",
+                value = vidas.toString(),
+                bgColor = Color.White,
+                valueColor = Color(0xFFE84B50)
+            )
+            InfoItem(
+                icon = R.drawable.oinkies,
+                contentDesc = "Oinkies",
+                value = monedas.toString(),
+                bgColor = Color.White,
+                valueColor = Color(0xFFB7760C)
+            )
+            InfoItem(
+                icon = R.drawable.streak,
+                contentDesc = "Racha",
+                value = streak.toString(),
+                bgColor = Color.White,
+                valueColor = Color(0xFF7D1DD0)
+            )
+        }
+        Spacer(modifier = Modifier.height(3.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Nivel $nivel",
+                color = Color.White,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                modifier = Modifier
+                    .background(Color(0xFF4D773A), RoundedCornerShape(9.dp))
+                    .padding(horizontal = 12.dp, vertical = 2.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = nivelTitulo,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.padding(vertical = 5.dp),
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
+fun InfoItem(icon: Int, contentDesc: String, value: String, bgColor: Color, valueColor: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(bgColor)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .heightIn(min = 30.dp)
+    ) {
+        Box(
+            Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFF5F5F5)), // fondo avatar
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = icon),
+                contentDescription = contentDesc,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        Text(
+            text = value,
+            color = valueColor,
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(start = 5.dp)
+        )
     }
 }
